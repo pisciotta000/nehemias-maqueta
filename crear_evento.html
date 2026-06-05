@@ -99,7 +99,7 @@
 <body>
   <div class="telefono">
     <div class="appbar">
-      <span class="volver-ic" onclick="alert('(maqueta) Volver')">‹</span>
+      <span class="volver-ic" onclick="volver()">‹</span>
       <div>
         <div class="tit">Crear evento</div>
         <div class="sub">Iglesia: Multimedia - Rajem</div>
@@ -116,6 +116,11 @@ let IMG = '';        // dataURL de la imagen elegida
 let PUBLICADO = null; // datos del evento publicado (para la pantalla de confirmación)
 
 function $(id){ return document.getElementById(id); }
+// Volver al home (de donde se entra con el botón "＋ Crear evento" del líder de Multimedia).
+function volver(){
+  if(history.length>1){ history.back(); }
+  else { location.href='home_miembro.html?rol=multimedia'; }
+}
 function fv(f){ if(!f) return ''; const p=f.split('-'); return p.length===3&&p[0].length===4?`${p[2]}-${p[1]}-${p[0]}`:f; }
 
 function render(){
