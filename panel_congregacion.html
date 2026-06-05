@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nehemías · Maqueta Panel de Congregación</title>
+<!--
+  MAQUETA del Panel web de administración de la App 2 (congregación), según
+  SUITE_NEHEMIAS.md. Es solo un prototipo visual y funcional con DATOS DE EJEMPLO
+  (en memoria): NO usa el backend ni forma parte de las apps. Sirve para ver y
+  validar el diseño de las pantallas nuevas antes de programar.
+
+  Secciones: Resumen/efectividad, Miembros (lista+registro con roles), Grupo
+  familiar, Presentaciones de niños, Bautismos y Eventos (push con imagen).
+-->
+<style>
+  :root{
+    --fondo:#0D0A15; --superficie:#1A1525; --superficie2:#221C2B;
+    --morado:#7000FF; --cian:#4DD0E1; --texto:#fff; --texto2:#B0AEC4;
+    --verde:#43A047; --naranja:#FB8C00; --rojo:#E53935; --dorado:#FFD54F;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--fondo);color:var(--texto);font-family:"Segoe UI",Roboto,system-ui,sans-serif;display:flex;min-height:100vh;}
+  a{color:inherit;}
+
+  /* Sidebar */
+  .sidebar{width:225px;background:var(--superficie);padding:18px 12px;flex:0 0 auto;border-right:1px solid #2a2440;}
+  .marca{display:flex;align-items:center;gap:10px;font-weight:bold;font-size:17px;margin-bottom:4px;}
+  .marca .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--morado),var(--cian));display:grid;place-items:center;}
+  .sub{color:var(--texto2);font-size:11px;margin:0 0 18px 44px;}
+  .nav button{width:100%;text-align:left;background:transparent;border:0;color:var(--texto2);padding:11px 12px;border-radius:9px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:3px;}
+  .nav button:hover{background:var(--superficie2);color:#fff;}
+  .nav button.activo{background:linear-gradient(135deg,var(--morado),#5a00cc);color:#fff;font-weight:bold;}
+  .aviso{margin-top:18px;font-size:10px;color:#6f6a85;line-height:1.5;border-top:1px solid #2a2440;padding-top:12px;}
+
+  /* Main */
+  main{flex:1;padding:24px 28px;overflow-x:hidden;}
+  h1.titulo{margin:0 0 4px;font-size:23px;}
+  .desc{color:var(--texto2);font-size:13px;margin:0 0 20px;}
+
+  /* Cards de resumen */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px;}
+  .card{background:var(--superficie);border-radius:12px;padding:16px;}
+  .card .n{font-size:28px;font-weight:bold;}
+  .card .l{color:var(--texto2);font-size:12px;margin-top:2px;}
+
+  /* Chips/badges */
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:14px;font-size:11px;font-weight:bold;}
+  .roles{display:flex;flex-wrap:wrap;gap:5px;}
+
+  /* Tabla/lista */
+  .panel{background:var(--superficie);border-radius:12px;padding:18px;margin-bottom:20px;}
+  .panel h3{margin:0 0 14px;font-size:14px;text-transform:uppercase;letter-spacing:.5px;color:var(--cian);}
+  .item{display:flex;align-items:center;gap:12px;padding:11px;border-radius:10px;background:var(--superficie2);margin-bottom:9px;}
+  .avatar{width:42px;height:42px;border-radius:50%;background:var(--morado);display:grid;place-items:center;font-weight:bold;flex:0 0 auto;}
+  .item .nombre{font-weight:bold;}
+  .item .meta{color:var(--texto2);font-size:12px;}
+  .spacer{margin-left:auto;}
+
+  /* Inputs */
+  label.f{display:block;font-size:12px;color:var(--texto2);margin:10px 0 4px;}
+  input,select,textarea{width:100%;background:var(--fondo);border:1px solid #3a3357;color:#fff;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--morado);}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
+  .btn{background:var(--morado);color:#fff;border:0;border-radius:9px;padding:11px 18px;font-size:14px;font-weight:bold;cursor:pointer;margin-top:14px;}
+  .btn.sec{background:var(--superficie2);}
+  .buscar{margin-bottom:14px;}
+  .check-roles{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+  .check-roles label{display:flex;align-items:center;gap:6px;background:var(--fondo);border:1px solid #3a3357;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;}
+
+  /* Barras de reporte */
+  .barras{display:flex;align-items:flex-end;gap:8px;height:140px;padding-top:10px;}
+  .barra-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;justify-content:flex-end;}
+  .barra-v{width:70%;background:linear-gradient(to top,var(--morado),var(--cian));border-radius:5px 5px 0 0;min-height:2px;}
+  .barra-col .mes{font-size:10px;color:var(--texto2);}
+  .barra-col .cant{font-size:11px;font-weight:bold;}
+
+  /* Evento / push */
+  .evento-card{background:var(--superficie2);border-radius:12px;overflow:hidden;margin-bottom:12px;}
+  .evento-card img{width:100%;height:130px;object-fit:cover;display:block;}
+  .evento-body{padding:13px;}
+  .push-sim{background:#101014;border:1px solid #2a2440;border-radius:14px;padding:10px;max-width:330px;margin-top:10px;}
+  .push-top{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--texto2);margin-bottom:6px;}
+  .push-ico{width:20px;height:20px;border-radius:5px;background:linear-gradient(135deg,var(--morado),var(--cian));}
+  .push-img{width:100%;height:120px;object-fit:cover;border-radius:8px;margin-top:8px;}
+  .vacio{color:#6f6a85;font-size:13px;}
+  .ok{color:var(--verde);font-size:12px;margin-top:8px;}
+  .chevron{margin-left:auto;color:#6f6a85;font-size:22px;}
+
+  /* Modal dashboard de equipo */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto;z-index:30;}
+  .overlay.abierto{display:flex;}
+  .modal{background:var(--fondo);border:1px solid #2a2440;border-radius:16px;width:100%;max-width:560px;overflow:hidden;}
+  .modal .cab{background:linear-gradient(135deg,var(--morado),var(--cian));padding:18px;display:flex;align-items:center;gap:12px;}
+  .cerrar{margin-left:auto;background:rgba(0,0,0,.25);border:0;color:#fff;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;}
+  .metricas{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .mchip{border-radius:20px;padding:4px 9px;font-size:11px;font-weight:bold;display:inline-flex;align-items:center;gap:5px;border:1px solid;}
+
+  @media(max-width:680px){.form-grid{grid-template-columns:1fr;} body{flex-direction:column;} .sidebar{width:100%;}}
+</style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="marca"><span class="logo">⛪</span> Nehemías</div>
+    <p class="sub">Panel · Congregación</p>
+    <nav class="nav" id="nav"></nav>
+    <p class="aviso">MAQUETA con datos de ejemplo (en memoria). No usa el backend
+      ni forma parte de las apps. Diseño para validar antes de programar.</p>
+  </aside>
+  <main id="main"></main>
+
+  <!-- Modal: dashboard de un equipo (se abre desde Resumen → Efectividad) -->
+  <div class="overlay" id="ov" onclick="if(event.target.id==='ov')cerrarEquipo()">
+    <div class="modal" id="modalEquipo"></div>
+  </div>
+
+<script>
+// ============ DATOS DE EJEMPLO (en memoria) ============
+const ROLES = {
+  miembro:             {label:'Miembro',            color:'#8b86a3'},
+  servidor:            {label:'Servidor',           color:'var(--cian)'},
+  lider:               {label:'Líder',              color:'var(--morado)'},
+  pastor_ministerial:  {label:'Pastor ministerial', color:'var(--naranja)'},
+  pastor:              {label:'Pastor general',     color:'var(--dorado)'},
+};
+
+const DATA = {
+  iglesia: {nombre:'Multimedia - Rajem', direccion:'Av. Central 1234', horarios:'Dom 10 y 19 hs'},
+  miembros: [
+    {id:1, nombre:'Gustavo Pisciotta', email:'gustavo@iglesia.com', tel:'+54 11 5555-1234', roles:['miembro','servidor','lider','pastor'], equipo:'EQ Ministerial'},
+    {id:2, nombre:'Macarena Fernandez', email:'maca@iglesia.com', tel:'+54 11 5555-9999', roles:['miembro','servidor','lider','pastor_ministerial'], equipo:'EQ Ministerial'},
+    {id:3, nombre:'Pablo Ortigoza', email:'pablo@iglesia.com', tel:'No', roles:['miembro','servidor'], equipo:'Multimedia'},
+    {id:4, nombre:'Antonio Pérez', email:'antonio@iglesia.com', tel:'+54 11 4444-2222', roles:['miembro','servidor','lider'], equipo:'Alabanza'},
+    {id:5, nombre:'Lucía Gómez', email:'lucia@iglesia.com', tel:'No', direccion:'Belgrano 850', ocupacion:'Estudiante', roles:['miembro'], equipo:'—', nuevo:true, sem0:1},
+    {id:6, nombre:'Daniel Ruiz', email:'daniel@iglesia.com', tel:'No', direccion:'San Martín 120', ocupacion:'Electricista', roles:['miembro','servidor'], equipo:'Multimedia'},
+  ],
+  familias: {
+    1: [{rel:'Cónyuge', nombre:'Ana López'}, {rel:'Hijo/a', nombre:'Tomás Pisciotta (5)'}, {rel:'Hijo/a', nombre:'Mía Pisciotta (2)'}],
+    4: [{rel:'Cónyuge', nombre:'Sofía Díaz'}, {rel:'Hijo/a', nombre:'Benjamín Pérez (1)'}],
+  },
+  presentaciones: [
+    {id:1, nino:'Mía Pisciotta', fnac:'2024-02-10', fecha:'2026-03-15', padres:'Gustavo y Ana', oficiante:'Ps. Gustavo'},
+    {id:2, nino:'Benjamín Pérez', fnac:'2025-01-22', fecha:'2026-05-10', padres:'Antonio y Sofía', oficiante:'Ps. Gustavo'},
+    {id:3, nino:'Valentina Ruiz', fnac:'2025-06-01', fecha:'2026-05-24', padres:'Daniel y Cecilia', oficiante:'Ps. Macarena'},
+  ],
+  bautismos: [
+    {id:1, miembro:'Pablo Ortigoza', fecha:'2026-01-19', lugar:'Templo central', oficiante:'Ps. Gustavo'},
+    {id:2, miembro:'Lucía Gómez', fecha:'2026-03-23', lugar:'Templo central', oficiante:'Ps. Gustavo'},
+    {id:3, miembro:'Daniel Ruiz', fecha:'2026-03-23', lugar:'Templo central', oficiante:'Ps. Macarena'},
+    {id:4, miembro:'Carla Méndez', fecha:'2026-05-04', lugar:'Río', oficiante:'Ps. Gustavo'},
+  ],
+  eventos: [
+    {id:1, titulo:'Vigilia de Jóvenes', desc:'Noche de adoración y palabra.', fecha:'2026-06-14', hora:'21:00', lugar:'Templo', imagen:'', creado_por:'Multimedia'},
+  ],
+  // efectividad por equipo + servidores (reusa la idea del dashboard de la App 1)
+  equipos: [
+    {nombre:'Multimedia', cumplimiento:91, pendientes:2, rechazos:1, servidores:[
+      {nombre:'Pablo Ortigoza', cumplimiento:100, completadas:23, pendientes:0, rechazos:0},
+      {nombre:'Gustavo Pisciotta', cumplimiento:97, completadas:33, pendientes:0, rechazos:1},
+      {nombre:'Daniel Ruiz', cumplimiento:82, completadas:9, pendientes:2, rechazos:0},
+    ]},
+    {nombre:'Alabanza', cumplimiento:84, pendientes:4, rechazos:2, servidores:[
+      {nombre:'Antonio Pérez', cumplimiento:88, completadas:14, pendientes:1, rechazos:1},
+      {nombre:'María Núñez', cumplimiento:80, completadas:8, pendientes:3, rechazos:1},
+    ]},
+    {nombre:'Bienvenida', cumplimiento:73, pendientes:3, rechazos:3, servidores:[
+      {nombre:'Sofía Ramírez', cumplimiento:70, completadas:5, pendientes:2, rechazos:2},
+      {nombre:'Carlos Medina', cumplimiento:76, completadas:9, pendientes:1, rechazos:1},
+    ]},
+  ],
+};
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+// Seguimiento de nuevos miembros: push semanal durante el primer mes (4 semanas);
+// al llegar al mes pasan a miembro común y dejan de notificar.
+// SIM_SEMANAS simula el paso del tiempo (la maqueta no tiene reloj real).
+const SEMANAS_SEGUIMIENTO = 4;
+let SIM_SEMANAS = 0;
+function semanasTrans(m){ return (m.sem0||0) + SIM_SEMANAS; } // semanas desde el alta
+
+// ============ NAV ============
+const SECCIONES = [
+  {id:'resumen',       icon:'📊', label:'Resumen'},
+  {id:'miembros',      icon:'👥', label:'Miembros'},
+  {id:'familia',       icon:'👨‍👩‍👧', label:'Grupo familiar'},
+  {id:'presentaciones',icon:'🍼', label:'Presentaciones'},
+  {id:'bautismos',     icon:'💧', label:'Bautismos'},
+  {id:'eventos',       icon:'📅', label:'Eventos'},
+];
+let SECCION = 'resumen';
+
+function renderNav(){
+  document.getElementById('nav').innerHTML = SECCIONES.map(s =>
+    `<button class="${s.id===SECCION?'activo':''}" onclick="ir('${s.id}')">${s.icon} ${s.label}</button>`
+  ).join('');
+}
+function ir(id){ SECCION = id; renderNav(); render(); window.scrollTo(0,0); }
+
+// ============ HELPERS ============
+function rolChip(r){ const x = ROLES[r] || {label:r,color:'#888'}; return `<span class="chip" style="color:${x.color};background:${x.color}26">${x.label}</span>`; }
+function inicial(n){ return (n||'?').trim()[0].toUpperCase(); }
+function fv(f){ if(!f) return ''; const p=f.split('-'); return p.length===3&&p[0].length===4?`${p[2]}-${p[1]}-${p[0]}`:f; }
+function porMes(lista, campo, anio){
+  const c = Array(12).fill(0);
+  lista.forEach(x=>{ const f=(x[campo]||''); if(f.slice(0,4)==String(anio)){ const m=parseInt(f.slice(5,7))-1; if(m>=0&&m<12)c[m]++; }});
+  return c;
+}
+function barrasHtml(conteo){
+  const max = Math.max(1, ...conteo);
+  return `<div class="barras">${conteo.map((c,i)=>`
+    <div class="barra-col">
+      <div class="cant">${c||''}</div>
+      <div class="barra-v" style="height:${Math.round(c/max*110)}px"></div>
+      <div class="mes">${MESES[i]}</div>
+    </div>`).join('')}</div>`;
+}
+function colorCumpl(n){ return n>=75?'var(--verde)':n>=40?'var(--naranja)':'var(--rojo)'; }
+
+// Dashboard de un equipo (vista del pastor general): se abre tocando la
+// efectividad del equipo en el Resumen.
+function abrirEquipo(i){
+  const e = DATA.equipos[i];
+  const filas = (e.servidores||[]).map((s,j)=>`
+    <div class="item" style="cursor:pointer" onclick="abrirServidor(${i},${j})">
+      <div class="avatar" style="background:${colorCumpl(s.cumplimiento)}">${s.cumplimiento}%</div>
+      <div>
+        <div class="nombre">${s.nombre}</div>
+        <div class="metricas">
+          <span class="mchip" style="color:var(--verde);border-color:var(--verde);background:#43A04726">✓ ${s.completadas} compl.</span>
+          <span class="mchip" style="color:var(--naranja);border-color:var(--naranja);background:#FB8C0026">⏳ ${s.pendientes} pend.</span>
+          ${s.rechazos?`<span class="mchip" style="color:var(--rojo);border-color:var(--rojo);background:#E5393526">✕ ${s.rechazos} rech.</span>`:''}
+        </div>
+      </div>
+      <span class="chevron">›</span>
+    </div>`).join('') || '<div class="vacio">Sin servidores cargados.</div>';
+  document.getElementById('modalEquipo').innerHTML = `
+    <div class="cab">
+      <div class="avatar" style="background:rgba(0,0,0,.25)">${e.cumplimiento}%</div>
+      <div>
+        <div style="font-weight:bold;font-size:18px">Equipo ${e.nombre}</div>
+        <div style="font-size:13px">${e.cumplimiento}% cumplimiento · ${e.pendientes} pendientes · ${e.rechazos} rechazos</div>
+      </div>
+      <button class="cerrar" onclick="cerrarEquipo()">✕</button>
+    </div>
+    <div style="padding:16px">
+      <h3 style="margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--cian)">Servidores del equipo</h3>
+      ${filas}
+    </div>`;
+  document.getElementById('ov').classList.add('abierto');
+}
+function cerrarEquipo(){ document.getElementById('ov').classList.remove('abierto'); }
+
+function colorEstado(st){ return st==='Aceptado'?'var(--verde)':st==='Rechazado'?'var(--rojo)':'var(--naranja)'; }
+
+// Sintetiza un detalle plausible del servidor a partir de sus totales (en la app
+// real esto vendría de GET /api/dashboard_servidor; aquí es maqueta).
+function detalleDe(s, area){
+  const racha = s.cumplimiento>=95?6 : s.cumplimiento>=85?4 : s.cumplimiento>=75?2 : 0;
+  const eventos = ['Culto Domingo','Reunión de Oración','Vigilia','Servicio Especial','Reunión Jóvenes'];
+  const motivos = ['Viaje familiar','Trabajo','Problema de salud'];
+  let semana = 0;
+  const ffecha = () => { const d=new Date('2026-05-31'); d.setDate(d.getDate()-semana*7); semana++; const p=d.toISOString().slice(0,10).split('-'); return `${p[2]}-${p[1]}-${p[0]}`; };
+  const hist = [];
+  for(let i=0;i<Math.min(s.completadas,4);i++) hist.push({nombre:eventos[i%eventos.length], fecha:ffecha(), area, status:'Aceptado', motivo:''});
+  for(let i=0;i<s.rechazos;i++) hist.push({nombre:eventos[(i+2)%eventos.length], fecha:ffecha(), area, status:'Rechazado', motivo:motivos[i%motivos.length]});
+  for(let i=0;i<s.pendientes;i++) hist.push({nombre:eventos[(i+1)%eventos.length], fecha:ffecha(), area, status:'Pendiente', motivo:''});
+  const ausencias = s.rechazos>1 ? [{motivo:'Vacaciones', fecha_inicio:'2026-07-10', fecha_fin:'2026-07-20'}] : [];
+  return {racha, hist, ausencias};
+}
+
+// Detalle completo de un servidor (se abre desde el dashboard del equipo).
+function abrirServidor(ti, si){
+  const e = DATA.equipos[ti], s = e.servidores[si], d = detalleDe(s, e.nombre);
+  const tile = (v,l,c)=>`<div style="flex:1;min-width:80px;background:var(--superficie);border-radius:10px;padding:12px 6px;text-align:center"><div style="font-size:20px;font-weight:bold;color:${c}">${v}</div><div style="font-size:10px;color:var(--texto2);margin-top:2px">${l}</div></div>`;
+  const hist = d.hist.length ? d.hist.map(h=>`
+    <div class="item">
+      <span style="width:10px;height:10px;border-radius:50%;background:${colorEstado(h.status)};flex:0 0 auto"></span>
+      <div>
+        <div class="nombre" style="font-size:14px">${h.nombre}</div>
+        <div class="meta">${h.fecha} · ${h.area}</div>
+        ${h.status==='Rechazado'&&h.motivo?`<div class="meta" style="color:var(--rojo)">Motivo: ${h.motivo}</div>`:''}
+      </div>
+      <span class="mchip" style="margin-left:auto;color:${colorEstado(h.status)};border-color:${colorEstado(h.status)};background:${colorEstado(h.status)}26">${h.status}</span>
+    </div>`).join('') : '<div class="vacio">Sin cultos en el historial.</div>';
+  const aus = d.ausencias.length ? d.ausencias.map(a=>`
+    <div class="item">
+      <span style="width:10px;height:10px;border-radius:50%;background:var(--naranja);flex:0 0 auto"></span>
+      <div><div class="nombre" style="font-size:14px">${a.motivo}</div><div class="meta">${a.fecha_inicio} → ${a.fecha_fin}</div></div>
+    </div>`).join('') : '<div class="vacio">Sin ausencias registradas.</div>';
+  document.getElementById('modalEquipo').innerHTML = `
+    <div class="cab">
+      <div class="avatar" style="background:rgba(0,0,0,.25)">${inicial(s.nombre)}</div>
+      <div><div style="font-weight:bold;font-size:18px">${s.nombre}</div><div style="font-size:13px">Equipo ${e.nombre}</div></div>
+      <button class="cerrar" onclick="cerrarEquipo()">✕</button>
+    </div>
+    <div style="padding:16px">
+      <button class="btn sec" style="margin:0 0 14px" onclick="abrirEquipo(${ti})">← Volver al equipo</button>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">
+        ${tile(s.cumplimiento+'%','Cumplimiento',colorCumpl(s.cumplimiento))}
+        ${tile('🔥 '+d.racha,'Racha','var(--cian)')}
+        ${tile(s.completadas,'Completadas','var(--verde)')}
+        ${tile(s.pendientes,'Pendientes','var(--naranja)')}
+        ${tile(s.rechazos,'Rechazos','var(--rojo)')}
+      </div>
+      <h3 style="margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--cian)">Historial de cultos</h3>
+      ${hist}
+      <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--cian)">Ausencias</h3>
+      ${aus}
+    </div>`;
+  document.getElementById('ov').classList.add('abierto');
+}
+
+// ============ SECCIONES ============
+function render(){
+  ({resumen:secResumen, miembros:secMiembros, familia:secFamilia,
+    presentaciones:secPresentaciones, bautismos:secBautismos, eventos:secEventos}[SECCION])();
+}
+
+function secResumen(){
+  const anio = 2026;
+  const totalServidores = DATA.miembros.filter(m=>m.roles.includes('servidor')).length;
+  const pastores = DATA.miembros.filter(m=>m.roles.includes('pastor')||m.roles.includes('pastor_ministerial')).length;
+  const bautAnio = DATA.bautismos.filter(b=>b.fecha.startsWith(anio)).length;
+  const presAnio = DATA.presentaciones.filter(p=>p.fecha.startsWith(anio)).length;
+  document.getElementById('main').innerHTML = `
+    <h1 class="titulo">Resumen — ${DATA.iglesia.nombre}</h1>
+    <p class="desc">${DATA.iglesia.direccion} · ${DATA.iglesia.horarios}</p>
+    <div class="grid">
+      <div class="card"><div class="n">${DATA.miembros.length}</div><div class="l">Miembros</div></div>
+      <div class="card"><div class="n" style="color:var(--cian)">${totalServidores}</div><div class="l">Servidores</div></div>
+      <div class="card"><div class="n" style="color:var(--dorado)">${pastores}</div><div class="l">EQ Ministerial (pastores)</div></div>
+      <div class="card"><div class="n" style="color:var(--cian)">${bautAnio}</div><div class="l">Bautismos ${anio}</div></div>
+      <div class="card"><div class="n" style="color:var(--naranja)">${presAnio}</div><div class="l">Presentaciones ${anio}</div></div>
+    </div>
+    <div class="panel">
+      <h3>Efectividad por equipo (confirmaciones / pendientes / rechazos)</h3>
+      <p class="desc" style="margin:-6px 0 12px">Tocá un equipo para ver su dashboard de servidores (vista del pastor general).</p>
+      ${DATA.equipos.map((e,i)=>`
+        <div class="item" style="cursor:pointer" onclick="abrirEquipo(${i})">
+          <div class="avatar" style="background:${colorCumpl(e.cumplimiento)}">${e.cumplimiento}%</div>
+          <div>
+            <div class="nombre">${e.nombre}</div>
+            <div class="meta">${e.cumplimiento}% cumplimiento · ${e.pendientes} pendientes · ${e.rechazos} rechazos</div>
+          </div>
+          <span class="chevron">›</span>
+        </div>`).join('')}
+    </div>
+    <div class="panel">
+      <h3>Bautismos por mes (${anio})</h3>
+      ${barrasHtml(porMes(DATA.bautismos,'fecha',anio))}
+    </div>`;
+}
+
+function secMiembros(){
+  window._fMiembro = window._fMiembro || {q:'', rol:''};
+  const f = window._fMiembro;
+  // Promoción automática: al llegar al mes, el nuevo miembro pasa a miembro común
+  // y deja de notificar.
+  DATA.miembros.forEach(m=>{
+    if(m.nuevo && semanasTrans(m) >= SEMANAS_SEGUIMIENTO){ m.nuevo=false; m.promovido=true; }
+  });
+  const enSeguimiento = DATA.miembros.filter(m=>m.nuevo).length;
+  const lista = DATA.miembros.filter(m =>
+    (!f.q || m.nombre.toLowerCase().includes(f.q.toLowerCase())) &&
+    (!f.rol || m.roles.includes(f.rol))
+  );
+  document.getElementById('main').innerHTML = `
+    <h1 class="titulo">Miembros</h1>
+    <p class="desc">Lista, registro y asignación de roles. ${DATA.miembros.length} miembros.</p>
+
+    <div class="panel">
+      <h3>Registrar miembro</h3>
+      <div class="form-grid">
+        <div><label class="f">Nombre y apellido</label><input id="m_nombre" placeholder="Nombre"></div>
+        <div><label class="f">Email</label><input id="m_email" placeholder="email@iglesia.com"></div>
+        <div><label class="f">Teléfono</label><input id="m_tel" placeholder="opcional"></div>
+        <div><label class="f">Dirección</label><input id="m_dir" placeholder="Calle y número"></div>
+        <div><label class="f">¿De qué trabaja? (ocupación)</label><input id="m_ocup" placeholder="Ej: docente, comerciante"></div>
+        <div><label class="f">Equipo</label>
+          <select id="m_equipo"><option>—</option><option>Multimedia</option><option>Alabanza</option><option>Bienvenida</option><option>EQ Ministerial</option></select></div>
+      </div>
+      <label class="f">Roles (acumulables)</label>
+      <div class="check-roles">
+        ${Object.entries(ROLES).map(([k,v])=>`<label><input type="checkbox" value="${k}" ${k==='miembro'?'checked':''}> ${v.label}</label>`).join('')}
+      </div>
+      <label class="check-roles" style="display:flex;margin-top:10px"><label style="border-color:var(--verde)"><input type="checkbox" id="m_nuevo" checked> ✨ Nuevo miembro (avisar por push)</label></label>
+      <button class="btn" onclick="registrarMiembro()">＋ Registrar</button>
+      <div class="ok" id="m_ok"></div>
+      <div id="m_sim"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Seguimiento de nuevos miembros</h3>
+      <p class="desc" style="margin:0 0 10px">Por cada nuevo miembro, el <b>equipo de
+        Consolidación</b> recibe un recordatorio <b>push una vez por semana</b> (para
+        hacerle seguimiento). Al cumplir <b>${SEMANAS_SEGUIMIENTO} semanas (1 mes)</b>
+        pasa a <b>miembro común</b> y se dejan de enviar avisos.</p>
+      <div class="item" style="background:var(--fondo)">
+        <div class="avatar" style="background:var(--verde)">${enSeguimiento}</div>
+        <div><div class="nombre">${enSeguimiento} en seguimiento</div>
+          <div class="meta">Tiempo simulado: hoy + ${SIM_SEMANAS} semana(s)</div></div>
+        <div class="spacer"></div>
+        <button class="btn" style="margin:0" onclick="SIM_SEMANAS++;secMiembros()">⏩ Simular +1 semana</button>
+        <button class="btn sec" style="margin:0 0 0 8px" onclick="reiniciarSeguimiento()">↺ Reiniciar</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Listado</h3>
+      <input class="buscar" placeholder="Buscar por nombre..." value="${f.q}" oninput="window._fMiembro.q=this.value;secMiembros()">
+      <label class="f">Filtrar por rol</label>
+      <select onchange="window._fMiembro.rol=this.value;secMiembros()">
+        <option value="">Todos</option>
+        ${Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${f.rol===k?'selected':''}>${v.label}</option>`).join('')}
+      </select>
+      <div style="margin-top:14px">
+        ${lista.length?lista.map(m=>`
+          <div class="item">
+            <div class="avatar">${inicial(m.nombre)}</div>
+            <div>
+              <div class="nombre">${m.nombre} ${m.nuevo
+                ? `<span class="chip" style="color:var(--verde);background:#43A04726">✨ Nuevo · seguimiento sem. ${Math.min(semanasTrans(m)+1,SEMANAS_SEGUIMIENTO)}/${SEMANAS_SEGUIMIENTO}</span>`
+                : (m.promovido?`<span class="chip" style="color:var(--texto2);background:#ffffff14">✓ Pasó a miembro</span>`:'')}</div>
+              <div class="meta">${m.email} · ${m.tel} · Equipo: ${m.equipo}</div>
+              <div class="meta">${m.direccion||'Sin dirección'} · 💼 ${m.ocupacion||'—'}</div>
+              <div class="roles" style="margin-top:5px">${m.roles.map(rolChip).join('')}</div>
+            </div>
+          </div>`).join(''):'<div class="vacio">Sin resultados.</div>'}
+      </div>
+    </div>`;
+}
+function registrarMiembro(){
+  const nombre = document.getElementById('m_nombre').value.trim();
+  if(!nombre){ document.getElementById('m_ok').textContent='⚠️ Falta el nombre.'; return; }
+  // Tomamos los roles del bloque de roles (excluye el check "Nuevo miembro").
+  const roles = [...document.querySelectorAll('.check-roles input:checked')].map(c=>c.value).filter(v=>ROLES[v]);
+  const nuevo = document.getElementById('m_nuevo').checked;
+  DATA.miembros.push({
+    id: Date.now(), nombre,
+    email: document.getElementById('m_email').value.trim()||'—',
+    tel: document.getElementById('m_tel').value.trim()||'No',
+    direccion: document.getElementById('m_dir').value.trim(),
+    ocupacion: document.getElementById('m_ocup').value.trim(),
+    roles: roles.length?roles:['miembro'],
+    equipo: document.getElementById('m_equipo').value,
+    nuevo, sem0:0,
+  });
+  secMiembros();
+  document.getElementById('m_ok').textContent='✓ Miembro registrado (en la maqueta).';
+  // Si es nuevo miembro, se programa el recordatorio semanal de seguimiento.
+  if(nuevo){
+    document.getElementById('m_sim').innerHTML = `
+      <div class="ok">📣 Recordatorio de seguimiento programado (push semanal al equipo de Consolidación):</div>
+      <div class="push-sim">
+        <div class="push-top"><span class="push-ico"></span> Nehemías · ahora</div>
+        <div style="font-weight:bold">✨ Nuevo miembro — semana 1 de ${SEMANAS_SEGUIMIENTO}</div>
+        <div style="color:var(--texto2);font-size:13px">${nombre} se sumó. Hacé el seguimiento. Se repetirá una vez por semana durante el primer mes; al mes pasa a miembro y deja de avisar.</div>
+      </div>`;
+  } else {
+    document.getElementById('m_sim').innerHTML = '';
+  }
+}
+
+function reiniciarSeguimiento(){
+  SIM_SEMANAS = 0;
+  DATA.miembros.forEach(m=>{ if(m.promovido){ m.nuevo=true; m.promovido=false; } });
+  secMiembros();
+}
+
+function secFamilia(){
+  window._famSel = window._famSel ?? DATA.miembros[0].id;
+  const sel = window._famSel;
+  const miembro = DATA.miembros.find(m=>m.id==sel);
+  const familia = DATA.familias[sel] || [];
+  document.getElementById('main').innerHTML = `
+    <h1 class="titulo">Grupo familiar</h1>
+    <p class="desc">Cada miembro (padre/madre) registra su núcleo familiar: cónyuge e hijos. Conecta con las presentaciones de niños.</p>
+    <div class="panel">
+      <h3>Responsable del grupo</h3>
+      <select onchange="window._famSel=this.value;secFamilia()">
+        ${DATA.miembros.map(m=>`<option value="${m.id}" ${m.id==sel?'selected':''}>${m.nombre}</option>`).join('')}
+      </select>
+    </div>
+    <div class="panel">
+      <h3>Familia de ${miembro.nombre}</h3>
+      ${familia.length?familia.map(x=>`
+        <div class="item">
+          <div class="avatar" style="background:var(--superficie)">${inicial(x.nombre)}</div>
+          <div><div class="nombre">${x.nombre}</div><div class="meta">${x.rel}</div></div>
+        </div>`).join(''):'<div class="vacio">Sin integrantes cargados.</div>'}
+      <div class="form-grid" style="margin-top:6px">
+        <div><label class="f">Nombre del integrante</label><input id="fam_nombre" placeholder="Nombre"></div>
+        <div><label class="f">Relación</label>
+          <select id="fam_rel"><option>Cónyuge</option><option>Hijo/a</option><option>Otro</option></select></div>
+      </div>
+      <button class="btn" onclick="agregarFamiliar()">＋ Agregar integrante</button>
+      <div class="ok" id="fam_ok"></div>
+    </div>`;
+}
+function agregarFamiliar(){
+  const nombre=document.getElementById('fam_nombre').value.trim();
+  if(!nombre){document.getElementById('fam_ok').textContent='⚠️ Falta el nombre.';return;}
+  const sel=window._famSel;
+  (DATA.familias[sel] = DATA.familias[sel]||[]).push({rel:document.getElementById('fam_rel').value, nombre});
+  secFamilia();
+  document.getElementById('fam_ok').textContent='✓ Integrante agregado (en la maqueta).';
+}
+
+function secPresentaciones(){
+  const anio=2026;
+  document.getElementById('main').innerHTML = `
+    <h1 class="titulo">Presentaciones de niños</h1>
+    <p class="desc">Base de datos de presentaciones/dedicaciones, con reportes por mes y año.</p>
+    <div class="panel">
+      <h3>Reporte ${anio} · total: ${DATA.presentaciones.filter(p=>p.fecha.startsWith(anio)).length}</h3>
+      ${barrasHtml(porMes(DATA.presentaciones,'fecha',anio))}
+    </div>
+    <div class="panel">
+      <h3>Registrar presentación</h3>
+      <div class="form-grid">
+        <div><label class="f">Nombre del niño/a</label><input id="p_nino"></div>
+        <div><label class="f">Padres</label><input id="p_padres"></div>
+        <div><label class="f">Fecha de nacimiento</label><input id="p_fnac" type="date"></div>
+        <div><label class="f">Lugar de nacimiento</label><input id="p_lugarnac" placeholder="Ciudad / hospital"></div>
+        <div><label class="f">Fecha de presentación</label><input id="p_fecha" type="date"></div>
+        <div><label class="f">Oficiante</label><input id="p_ofi" placeholder="Pastor/a"></div>
+      </div>
+      <button class="btn" onclick="registrarPresentacion()">＋ Registrar</button>
+      <div class="ok" id="p_ok"></div>
+    </div>
+    <div class="panel">
+      <h3>Listado</h3>
+      ${DATA.presentaciones.map(p=>`
+        <div class="item">
+          <div class="avatar" style="background:var(--naranja)">🍼</div>
+          <div><div class="nombre">${p.nino}</div>
+            <div class="meta">Presentado: ${fv(p.fecha)} · Nac: ${fv(p.fnac)}${p.lugarNac?' en '+p.lugarNac:''} · ${p.padres} · ${p.oficiante}</div></div>
+        </div>`).join('')}
+    </div>`;
+}
+function registrarPresentacion(){
+  const nino=document.getElementById('p_nino').value.trim();
+  const fecha=document.getElementById('p_fecha').value;
+  if(!nino||!fecha){document.getElementById('p_ok').textContent='⚠️ Falta nombre o fecha de presentación.';return;}
+  DATA.presentaciones.push({id:Date.now(),nino,fnac:document.getElementById('p_fnac').value,
+    lugarNac:document.getElementById('p_lugarnac').value.trim(),fecha,
+    padres:document.getElementById('p_padres').value||'—',oficiante:document.getElementById('p_ofi').value||'—'});
+  secPresentaciones();
+  document.getElementById('p_ok').textContent='✓ Presentación registrada (en la maqueta).';
+}
+
+function secBautismos(){
+  const anio=2026;
+  document.getElementById('main').innerHTML = `
+    <h1 class="titulo">Bautismos</h1>
+    <p class="desc">Registro de bautismos con reportes por mes y año.</p>
+    <div class="panel">
+      <h3>Reporte ${anio} · total: ${DATA.bautismos.filter(b=>b.fecha.startsWith(anio)).length}</h3>
+      ${barrasHtml(porMes(DATA.bautismos,'fecha',anio))}
+    </div>
+    <div class="panel">
+      <h3>Registrar bautismo</h3>
+      <div class="form-grid">
+        <div><label class="f">Miembro</label><input id="b_miembro"></div>
+        <div><label class="f">Fecha</label><input id="b_fecha" type="date"></div>
+        <div><label class="f">Lugar</label><input id="b_lugar"></div>
+        <div><label class="f">Oficiante</label><input id="b_ofi"></div>
+      </div>
+      <button class="btn" onclick="registrarBautismo()">＋ Registrar</button>
+      <div class="ok" id="b_ok"></div>
+    </div>
+    <div class="panel">
+      <h3>Listado</h3>
+      ${DATA.bautismos.map(b=>`
+        <div class="item">
+          <div class="avatar" style="background:var(--cian)">💧</div>
+          <div><div class="nombre">${b.miembro}</div>
+            <div class="meta">${fv(b.fecha)} · ${b.lugar} · ${b.oficiante}</div></div>
+        </div>`).join('')}
+    </div>`;
+}
+function registrarBautismo(){
+  const miembro=document.getElementById('b_miembro').value.trim();
+  const fecha=document.getElementById('b_fecha').value;
+  if(!miembro||!fecha){document.getElementById('b_ok').textContent='⚠️ Falta miembro o fecha.';return;}
+  DATA.bautismos.push({id:Date.now(),miembro,fecha,lugar:document.getElementById('b_lugar').value||'—',oficiante:document.getElementById('b_ofi').value||'—'});
+  secBautismos();
+  document.getElementById('b_ok').textContent='✓ Bautismo registrado (en la maqueta).';
+}
+
+function secEventos(){
+  document.getElementById('main').innerHTML = `
+    <h1 class="titulo">Eventos de la congregación</h1>
+    <p class="desc">Solo el equipo de <b>Multimedia</b> puede cargar eventos. Al publicar avisa a toda la congregación por <b>push</b>; si lleva imagen, la push la muestra.</p>
+    <div class="panel">
+      <h3>Crear evento <span style="color:var(--texto2);text-transform:none;font-weight:normal">· permiso: equipo Multimedia</span></h3>
+      <div class="form-grid">
+        <div><label class="f">Título</label><input id="e_titulo" placeholder="Nombre del evento"></div>
+        <div><label class="f">Lugar</label><input id="e_lugar" placeholder="Templo / dirección"></div>
+        <div><label class="f">Fecha</label><input id="e_fecha" type="date"></div>
+        <div><label class="f">Hora</label><input id="e_hora" type="time"></div>
+      </div>
+      <label class="f">Descripción</label><textarea id="e_desc" rows="2" placeholder="Detalle del evento"></textarea>
+      <label class="f">Imagen (opcional — aparece en la push)</label>
+      <input id="e_img" type="file" accept="image/*" onchange="previImg(event)">
+      <img id="e_prev" class="push-img" style="display:none">
+      <button class="btn" onclick="crearEvento()">📣 Publicar y notificar</button>
+      <div id="e_sim"></div>
+    </div>
+    <div class="panel">
+      <h3>Eventos publicados</h3>
+      <div id="e_lista">${listaEventosHtml()}</div>
+    </div>`;
+}
+let _imgData = '';
+function previImg(ev){
+  const file=ev.target.files[0]; if(!file)return;
+  const r=new FileReader(); r.onload=e=>{_imgData=e.target.result; const p=document.getElementById('e_prev'); p.src=_imgData; p.style.display='block';}; r.readAsDataURL(file);
+}
+function listaEventosHtml(){
+  if(!DATA.eventos.length) return '<div class="vacio">Sin eventos.</div>';
+  return DATA.eventos.slice().reverse().map(e=>`
+    <div class="evento-card">
+      ${e.imagen?`<img src="${e.imagen}">`:''}
+      <div class="evento-body">
+        <div class="nombre" style="font-size:16px">${e.titulo}</div>
+        <div class="meta">${fv(e.fecha)} ${e.hora||''} · ${e.lugar||''}</div>
+        <div style="color:var(--texto2);font-size:13px;margin-top:5px">${e.desc||''}</div>
+        <div class="chip" style="color:var(--cian);background:#4DD0E126;margin-top:8px">por ${e.creado_por}</div>
+      </div>
+    </div>`).join('');
+}
+function crearEvento(){
+  const titulo=document.getElementById('e_titulo').value.trim();
+  const fecha=document.getElementById('e_fecha').value;
+  if(!titulo||!fecha){document.getElementById('e_sim').innerHTML='<div class="ok" style="color:var(--rojo)">⚠️ Falta título o fecha.</div>';return;}
+  const ev={id:Date.now(),titulo,desc:document.getElementById('e_desc').value,fecha,hora:document.getElementById('e_hora').value,lugar:document.getElementById('e_lugar').value,imagen:_imgData,creado_por:'Multimedia'};
+  DATA.eventos.push(ev);
+  document.getElementById('e_lista').innerHTML=listaEventosHtml();
+  // Simulación de la notificación push que recibiría la congregación
+  document.getElementById('e_sim').innerHTML = `
+    <div class="ok">✓ Publicado. Enviado a toda la congregación por push:</div>
+    <div class="push-sim">
+      <div class="push-top"><span class="push-ico"></span> Nehemías · ahora</div>
+      <div style="font-weight:bold">📅 ${ev.titulo}</div>
+      <div style="color:var(--texto2);font-size:13px">${fv(ev.fecha)} ${ev.hora||''} · ${ev.lugar||''}</div>
+      ${ev.imagen?`<img class="push-img" src="${ev.imagen}">`:''}
+    </div>`;
+  _imgData='';
+}
+
+// init
+renderNav();
+render();
+</script>
+</body>
+</html>

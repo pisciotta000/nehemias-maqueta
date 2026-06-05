@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nehemías · Maqueta Crear evento (Multimedia)</title>
+<!--
+  MAQUETA (App 2 / congregación) de la pantalla con la que el equipo de MULTIMEDIA
+  carga un evento para TODA la iglesia. Según SUITE_NEHEMIAS.md §7.5 / §12.7:
+    - Solo Multimedia puede crear eventos (permiso ligado al equipo Multimedia).
+    - Al publicar -> NOTIFICACIÓN PUSH a toda la congregación (SOLO PUSH, sin email).
+    - Si lleva imagen, la PUSH la muestra (estilo BigPicture, §8).
+    - Alcance acotado a la PROPIA iglesia del evento (multi-tenant, §12.5).
+  Usa los MISMOS colores de la App 1 (AGENTS.md §4). Prototipo visual con datos de
+  ejemplo: NO usa el backend. Endpoint real previsto: POST /api/crear_evento_congregacion.
+-->
+<style>
+  :root{
+    /* Paleta EXACTA de la App 1 (AGENTS.md §4) */
+    --fondo:#0D0A15; --superficie:#1A1525; --superficie2:#221C2B; --morado:#7000FF;
+    --cian:#4DD0E1; --texto:#FFFFFF; --texto2:#B0AEC4; --verde:#43A047; --naranja:#FB8C00; --rojo:#E53935;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#0D0A15;color:var(--texto);font-family:"Segoe UI",Roboto,system-ui,sans-serif;
+    min-height:100vh;display:grid;place-items:center;padding:20px;}
+  .telefono{width:100%;max-width:390px;height:790px;background:var(--fondo);border:1px solid #2a2440;
+    border-radius:28px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.55);}
+
+  .appbar{padding:18px 16px 14px;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#15102a,var(--fondo));}
+  .appbar .volver-ic{font-size:22px;cursor:pointer;color:var(--texto2);}
+  .appbar .tit{font-size:17px;font-weight:bold;}
+  .appbar .sub{font-size:11px;color:var(--texto2);}
+  .badge-eq{margin-left:auto;background:#7000FF26;color:#b388ff;border-radius:12px;padding:3px 10px;font-size:10px;font-weight:bold;}
+
+  .contenido{flex:1;overflow-y:auto;padding:16px;}
+  .seccion-tit{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--cian);margin:4px 0 12px;font-weight:bold;}
+  .seccion-tit.mt{margin-top:22px;}
+
+  label.f{display:block;font-size:12px;color:var(--texto2);margin:12px 0 5px;}
+  input,textarea,select.full{width:100%;background:var(--fondo);border:1px solid #3a3357;color:#fff;border-radius:9px;padding:11px;font-size:13px;font-family:inherit;}
+  input:focus,textarea:focus{outline:none;border-color:var(--morado);}
+  textarea{resize:vertical;}
+  .fila2{display:flex;gap:10px;}
+  .fila2>div{flex:1;}
+
+  /* Selector de imagen — estado vacío */
+  .img-drop{background:var(--superficie);border:1.5px dashed #3a3357;border-radius:14px;
+    padding:22px 16px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;}
+  .img-drop:hover{border-color:var(--morado);background:var(--superficie2);}
+  .img-drop .ic{width:50px;height:50px;border-radius:50%;background:#7000FF22;display:grid;
+    place-items:center;font-size:24px;margin:0 auto 10px;}
+  .img-drop .t{font-size:14px;font-weight:bold;}
+  .img-drop .d{font-size:11.5px;color:var(--texto2);margin-top:3px;}
+  /* Selector de imagen — con imagen elegida */
+  .img-prev{border-radius:14px;overflow:hidden;background:var(--superficie);border:1px solid #2a2440;}
+  .img-prev img{width:100%;height:152px;object-fit:cover;display:block;}
+  .img-prev .bar{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;}
+  .img-prev .lbl{color:var(--verde);font-weight:bold;font-size:12px;display:flex;align-items:center;gap:5px;}
+  .img-prev .acc{display:flex;gap:8px;}
+  .img-prev .acc button{background:var(--superficie2);color:#fff;border:0;border-radius:8px;
+    padding:6px 12px;font-size:12px;font-weight:bold;cursor:pointer;}
+  .img-prev .acc button.del{background:#E5393526;color:#ff8a80;}
+
+  /* Caja informativa del canal de notificación (solo push) */
+  .canal{display:flex;gap:10px;align-items:flex-start;background:var(--superficie);border:1px solid #2a2440;border-radius:12px;padding:12px;margin-top:18px;}
+  .canal .ic{font-size:20px;}
+  .canal .t{font-size:13px;font-weight:bold;}
+  .canal .d{font-size:11.5px;color:var(--texto2);margin-top:2px;line-height:1.45;}
+
+  .btn{width:100%;background:var(--morado);color:#fff;border:0;border-radius:11px;padding:13px;font-size:14px;font-weight:bold;cursor:pointer;margin-top:18px;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .err{color:#ff8a80;font-size:12px;margin-top:10px;}
+
+  /* Vista previa de la notificación push (estilo Android BigPicture) */
+  .push{background:#1f1b2e;border:1px solid #2a2440;border-radius:14px;overflow:hidden;margin-top:10px;}
+  .push .head{display:flex;align-items:center;gap:8px;padding:10px 12px 6px;font-size:11px;color:var(--texto2);}
+  .push .head .ap{width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,var(--morado),var(--cian));display:grid;place-items:center;font-size:11px;}
+  .push .body{padding:0 12px 10px;}
+  .push .body .t{font-weight:bold;font-size:14px;}
+  .push .body .m{font-size:12.5px;color:var(--texto2);margin-top:2px;}
+  .push .big{width:100%;display:block;margin-top:8px;}
+  /* Botones de acción de la notificación (estilo Android: texto en mayúscula) */
+  .push .acts{display:flex;border-top:1px solid #2a2440;}
+  .push .acts button{flex:1;background:none;border:0;color:var(--cian);font-weight:bold;
+    font-size:12px;text-transform:uppercase;letter-spacing:.4px;padding:10px;cursor:pointer;}
+  .push .acts button:active{background:#ffffff10;}
+  .push .acts button+button{border-left:1px solid #2a2440;}
+
+  /* Pantalla de confirmación */
+  .ok-card{background:var(--superficie);border:1px solid var(--verde);border-radius:14px;padding:16px;text-align:center;}
+  .ok-card .big-ic{font-size:42px;}
+  .ok-card .t{font-weight:bold;font-size:17px;margin-top:6px;}
+  .ok-card .d{color:var(--texto2);font-size:13px;margin-top:6px;}
+  .chip{display:inline-block;background:#43A04726;color:var(--verde);border-radius:12px;padding:3px 10px;font-size:11px;font-weight:bold;margin-top:10px;}
+  .btn.sec{background:var(--superficie2);}
+  .nota{color:#6f6a85;font-size:11px;line-height:1.5;margin-top:16px;}
+</style>
+</head>
+<body>
+  <div class="telefono">
+    <div class="appbar">
+      <span class="volver-ic" onclick="alert('(maqueta) Volver')">‹</span>
+      <div>
+        <div class="tit">Crear evento</div>
+        <div class="sub">Iglesia: Multimedia - Rajem</div>
+      </div>
+      <span class="badge-eq">⛪ Multimedia</span>
+    </div>
+    <div class="contenido" id="cont"></div>
+  </div>
+
+<script>
+// Estado del formulario (maqueta, sin backend).
+const IGLESIA = 'Iglesia Rajem';  // nombre que se estampa al compartir (en real, viene de la iglesia)
+let IMG = '';        // dataURL de la imagen elegida
+let PUBLICADO = null; // datos del evento publicado (para la pantalla de confirmación)
+
+function $(id){ return document.getElementById(id); }
+function fv(f){ if(!f) return ''; const p=f.split('-'); return p.length===3&&p[0].length===4?`${p[2]}-${p[1]}-${p[0]}`:f; }
+
+function render(){
+  $('cont').innerHTML = PUBLICADO ? vistaConfirmacion() : vistaForm();
+  if(!PUBLICADO){ actualizarPreview(); }
+}
+
+function vistaForm(){
+  return `
+    <div class="seccion-tit">Datos del evento</div>
+    <label class="f">Título *</label>
+    <input id="e_titulo" placeholder="Ej: Vigilia de Jóvenes" oninput="actualizarPreview()">
+    <div class="fila2">
+      <div><label class="f">Fecha *</label><input id="e_fecha" type="date" oninput="actualizarPreview()"></div>
+      <div><label class="f">Hora</label><input id="e_hora" type="time" oninput="actualizarPreview()"></div>
+    </div>
+    <label class="f">Lugar</label>
+    <input id="e_lugar" placeholder="Templo central / dirección" oninput="actualizarPreview()">
+    <label class="f">Descripción</label>
+    <textarea id="e_desc" rows="3" placeholder="Detalle del evento (opcional)"></textarea>
+
+    <label class="f">Imagen del evento (opcional)</label>
+    <div id="img_zona">${zonaImagenHtml()}</div>
+
+    <div class="canal">
+      <span class="ic">🔔</span>
+      <div>
+        <div class="t">Se avisará por notificación push</div>
+        <div class="d">Al publicar, toda la congregación de <b>tu iglesia</b> recibe una
+          push. Si cargás una imagen, aparece dentro de la notificación.</div>
+      </div>
+    </div>
+
+    <div class="seccion-tit mt">Así se verá la notificación</div>
+    <div id="push_prev"></div>
+
+    <button class="btn" onclick="publicar()">📣 Publicar y notificar</button>
+    <div class="err" id="err"></div>
+    <p class="nota">Endpoint previsto: <b>POST /api/crear_evento_congregacion</b>
+      (solo Multimedia). Notifica <b>solo por push</b> a la propia iglesia
+      (SUITE_NEHEMIAS.md §7.5 / §12.7).</p>`;
+}
+
+function zonaImagenHtml(){
+  const input = `<input id="file_in" type="file" accept="image/*" style="display:none" onchange="elegirImg(event)">`;
+  if(IMG){
+    return `
+      <div class="img-prev">
+        <img src="${IMG}">
+        <div class="bar">
+          <span class="lbl">✓ Imagen lista</span>
+          <div class="acc">
+            <button onclick="$('file_in').click()">Cambiar</button>
+            <button class="del" onclick="quitarImg()">Quitar</button>
+          </div>
+        </div>
+      </div>${input}`;
+  }
+  return `
+    <div class="img-drop" onclick="$('file_in').click()">
+      <div class="ic">🖼️</div>
+      <div class="t">Agregar imagen</div>
+      <div class="d">Aparecerá dentro de la notificación push</div>
+    </div>${input}`;
+}
+function elegirImg(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{ IMG=e.target.result; $('img_zona').innerHTML=zonaImagenHtml(); actualizarPreview(); };
+  r.readAsDataURL(f);
+}
+function quitarImg(){ IMG=''; $('img_zona').innerHTML=zonaImagenHtml(); actualizarPreview(); }
+
+// Vista previa en vivo de cómo llega la push (estilo Android BigPicture).
+function actualizarPreview(){
+  const cont=$('push_prev'); if(!cont) return;
+  const t=($('e_titulo')?.value||'').trim() || 'Título del evento';
+  const fecha=fv($('e_fecha')?.value||'');
+  const hora=$('e_hora')?.value||'';
+  const lugar=($('e_lugar')?.value||'').trim();
+  const meta=[fecha,hora,lugar].filter(Boolean).join(' · ') || 'Fecha · hora · lugar';
+  cont.innerHTML = `
+    <div class="push">
+      <div class="head"><span class="ap">⛪</span> Nehemías Comunidad · ahora</div>
+      <div class="body">
+        <div class="t">📅 ${t}</div>
+        <div class="m">${meta}</div>
+        ${IMG?`<img class="big" src="${IMG}">`:''}
+      </div>
+      <div class="acts">
+        <button onclick="compartirEvento()">↗ Compartir</button>
+      </div>
+    </div>`;
+}
+
+// Compartir el evento por el menú nativo del teléfono (WhatsApp, redes, etc.).
+// Manda la IMAGEN del evento como FOTO + la descripción como texto (NO un link):
+// usa la Web Share API nivel 2 (files). Si no hay imagen ni soporte, comparte el texto.
+async function compartirEvento(){
+  const e = PUBLICADO || {
+    titulo:($('e_titulo')?.value||'').trim(), fecha:$('e_fecha')?.value||'',
+    hora:$('e_hora')?.value||'', lugar:($('e_lugar')?.value||'').trim(),
+    desc:($('e_desc')?.value||'').trim(), imagen:IMG
+  };
+  const meta=[fv(e.fecha),e.hora,e.lugar].filter(Boolean).join(' · ');
+  const texto = `📅 *${e.titulo||'Evento'}*\n${meta}${e.desc?`\n\n${e.desc}`:''}\n\n— ${IGLESIA} · vía Nehemías Comunidad`;
+  // 1) Con imagen: compartirla como archivo (se ve como foto con pie de texto en redes/WhatsApp).
+  if(e.imagen){
+    try{
+      const blob = await (await fetch(e.imagen)).blob();
+      const file = new File([blob], 'evento.png', {type:blob.type||'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], text:texto, title:e.titulo||'Evento de la iglesia'});
+        return;
+      }
+    }catch(err){ if(err && err.name==='AbortError') return; }
+  }
+  // 2) Sin imagen o sin soporte de archivos: comparte el texto por el menú nativo.
+  try{
+    if(navigator.share){ await navigator.share({title:e.titulo||'Evento de la iglesia', text:texto}); return; }
+  }catch(err){ if(err && err.name==='AbortError') return; }
+  // 3) Respaldo de escritorio: abre WhatsApp con el texto.
+  window.open('https://wa.me/?text='+encodeURIComponent(texto), '_blank');
+}
+
+function publicar(){
+  const t=$('e_titulo').value.trim();
+  const fecha=$('e_fecha').value;
+  if(!t || !fecha){ $('err').textContent='⚠️ El título y la fecha son obligatorios.'; return; }
+  PUBLICADO={
+    titulo:t, fecha, hora:$('e_hora').value, lugar:$('e_lugar').value.trim(),
+    desc:$('e_desc').value.trim(), imagen:IMG
+  };
+  render();
+}
+
+function vistaConfirmacion(){
+  const e=PUBLICADO;
+  const meta=[fv(e.fecha),e.hora,e.lugar].filter(Boolean).join(' · ');
+  return `
+    <div class="ok-card">
+      <div class="big-ic">✅</div>
+      <div class="t">Evento publicado</div>
+      <div class="d">Se envió una <b>notificación push</b> a toda la congregación de tu iglesia.</div>
+      <div class="chip">🔔 Push enviada</div>
+    </div>
+
+    <div class="seccion-tit mt">Notificación enviada</div>
+    <div class="push">
+      <div class="head"><span class="ap">⛪</span> Nehemías Comunidad · ahora</div>
+      <div class="body">
+        <div class="t">📅 ${e.titulo}</div>
+        <div class="m">${meta}</div>
+        ${e.imagen?`<img class="big" src="${e.imagen}">`:''}
+      </div>
+      <div class="acts">
+        <button onclick="compartirEvento()">↗ Compartir</button>
+      </div>
+    </div>
+
+    <button class="btn" onclick="compartirEvento()">↗ Compartir evento</button>
+    <button class="btn sec" onclick="nuevo()">＋ Crear otro evento</button>
+    <button class="btn sec" onclick="alert('(maqueta) Ir a la lista de eventos')">Ver eventos publicados</button>
+    <p class="nota">En la app real, el backend guardaría el <b>EventoCongregacion</b>
+      (con <code>iglesia_id</code>) y dispararía la push con imagen vía FCM
+      (BigPicture en Android). Sin email (§12.7).</p>`;
+}
+
+function nuevo(){ PUBLICADO=null; IMG=''; render(); }
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nehemías Comunidad · Maquetas</title>
+<meta name="description" content="Maquetas interactivas de la suite Nehemías Comunidad." />
+<style>
+  :root{
+    --fondo:#0D0A15; --superficie:#1A1525; --superficie2:#221C2B; --morado:#7000FF;
+    --cian:#4DD0E1; --texto:#FFFFFF; --texto2:#B0AEC4;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;background:
+      radial-gradient(900px 500px at 50% -10%, #2a1060 0%, rgba(42,16,96,0) 60%), var(--fondo);
+    color:var(--texto);font-family:"Segoe UI",Roboto,system-ui,sans-serif;
+    padding:34px 18px 50px;}
+  .wrap{max-width:560px;margin:0 auto;}
+  .logo{width:74px;height:74px;border-radius:20px;margin:0 auto 16px;
+    background:linear-gradient(135deg,var(--morado),var(--cian));display:grid;place-items:center;font-size:38px;
+    box-shadow:0 14px 40px #7000ff55;}
+  h1{text-align:center;font-size:25px;margin:0 0 4px;}
+  .sub{text-align:center;color:var(--texto2);font-size:14px;margin:0 0 26px;line-height:1.5;}
+  .nota{text-align:center;color:#6f6a85;font-size:12px;margin:0 0 22px;}
+  .card{display:flex;align-items:center;gap:14px;background:var(--superficie);border:1px solid #2a2440;
+    border-radius:16px;padding:15px 16px;margin-bottom:13px;text-decoration:none;color:inherit;
+    transition:border-color .15s,transform .1s,background .15s;}
+  .card:hover{border-color:var(--morado);background:var(--superficie2);}
+  .card:active{transform:scale(.99);}
+  .card .ic{width:50px;height:50px;flex:0 0 50px;border-radius:13px;display:grid;place-items:center;font-size:25px;}
+  .card .tt{font-size:16px;font-weight:bold;}
+  .card .dd{font-size:12.5px;color:var(--texto2);margin-top:2px;line-height:1.4;}
+  .card .go{margin-left:auto;color:var(--cian);font-size:22px;}
+  .seccion{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--cian);
+    font-weight:bold;margin:26px 4px 12px;}
+  .pie{text-align:center;color:#6f6a85;font-size:11.5px;margin-top:30px;line-height:1.6;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">⛪</div>
+    <h1>Nehemías Comunidad</h1>
+    <p class="sub">Maquetas interactivas de la suite.<br>Abrilas desde el celular para probar el compartir de eventos.</p>
+
+    <div class="seccion">App del miembro (móvil)</div>
+
+    <a class="card" href="login_miembro.html">
+      <div class="ic" style="background:#7000FF22">🔑</div>
+      <div>
+        <div class="tt">Ingreso / Registro</div>
+        <div class="dd">Login de la congregación. Probá la demo (Miembro / Líder / Pastor).</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+
+    <a class="card" href="home_miembro.html?rol=miembro">
+      <div class="ic" style="background:#4DD0E122">🏠</div>
+      <div>
+        <div class="tt">Home del miembro</div>
+        <div class="dd">Eventos con botón <b>Compartir</b>, grupo familiar y perfil.</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+
+    <a class="card" href="home_miembro.html?rol=pastor">
+      <div class="ic" style="background:#FB8C0022">👑</div>
+      <div>
+        <div class="tt">Home como Pastor</div>
+        <div class="dd">Suma Panel, Gestión, Matrimonios, Escuelita y Jóvenes.</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+
+    <a class="card" href="crear_evento.html">
+      <div class="ic" style="background:#E91E6322">📣</div>
+      <div>
+        <div class="tt">Crear evento (Multimedia)</div>
+        <div class="dd">Cargar un evento y compartirlo como imagen + texto.</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+
+    <div class="seccion">Gestión (escritorio)</div>
+
+    <a class="card" href="panel_congregacion.html">
+      <div class="ic" style="background:#7000FF22">🖥️</div>
+      <div>
+        <div class="tt">Panel de congregación</div>
+        <div class="dd">Miembros, bautismos, presentaciones, eventos y efectividad.</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+
+    <a class="card" href="dashboard_equipo.html">
+      <div class="ic" style="background:#4DD0E122">📊</div>
+      <div>
+        <div class="tt">Dashboard de equipo</div>
+        <div class="dd">Métricas de servidores (datos de ejemplo).</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+
+    <p class="pie">Prototipos con datos de ejemplo · no usan el backend.<br>
+      El compartir de eventos manda la imagen + descripción al menú del teléfono (https).</p>
+  </div>
+</body>
+</html>

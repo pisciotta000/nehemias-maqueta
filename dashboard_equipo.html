@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nehemías · Prototipo Dashboard de Servidores</title>
+<!--
+  Prototipo VISUAL y funcional del Dashboard de Servidores (AGENTS.md §8.1).
+  - Replica la paleta de marca y la forma EXACTA de las respuestas de los
+    endpoints del backend:
+      GET /api/dashboard_equipo?equipo_id=   -> { status, nombre_ministerio, servidores:[...] }
+      GET /api/dashboard_servidor?user_id=   -> { status, servidor, metricas, historial, ausencias }
+  - Por defecto usa DATOS DE EJEMPLO (mock) para que funcione abriendo el
+    archivo directamente, sin backend.
+  - Para probar contra el backend real: activá "Usar API real", poné la URL
+    base y el equipo_id, y tocá "Cargar". (Requiere que el backend tenga CORS
+    habilitado o servir este archivo desde el mismo origen.)
+  Esto NO forma parte de la app Flutter; es una maqueta para validar el diseño.
+-->
+<style>
+  :root {
+    --fondo: #0D0A15;
+    --superficie: #1A1525;
+    --superficie2: #221C2B;
+    --morado: #7000FF;
+    --cian: #4DD0E1;
+    --texto: #FFFFFF;
+    --texto2: #B0AEC4;
+    --verde: #43A047;
+    --naranja: #FB8C00;
+    --rojo: #E53935;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--fondo);
+    color: var(--texto);
+    font-family: "Segoe UI", Roboto, system-ui, sans-serif;
+    padding: 0 0 60px;
+  }
+  header.app {
+    background: var(--fondo);
+    padding: 18px 20px 4px;
+    border-bottom: 1px solid #2a2440;
+    position: sticky; top: 0; z-index: 5;
+  }
+  header.app h1 {
+    font-size: 20px; margin: 0; display: flex; align-items: center; gap: 10px;
+  }
+  .badge-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--morado), var(--cian));
+    display: grid; place-items: center; font-size: 18px;
+  }
+  .config {
+    margin: 12px 0 8px; font-size: 12px; color: var(--texto2);
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  .config input[type=text] {
+    background: var(--superficie); border: 1px solid #3a3357; color: var(--texto);
+    border-radius: 6px; padding: 5px 8px; font-size: 12px;
+  }
+  .config button {
+    background: var(--morado); color: #fff; border: 0; border-radius: 6px;
+    padding: 6px 12px; font-size: 12px; font-weight: bold; cursor: pointer;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 16px; }
+
+  /* Resumen */
+  .resumen {
+    background: linear-gradient(135deg, var(--morado), var(--cian));
+    border-radius: 14px; padding: 16px; margin-bottom: 14px;
+  }
+  .resumen .ministerio { font-weight: bold; font-size: 17px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip {
+    background: rgba(255,255,255,.2); border-radius: 20px;
+    padding: 5px 11px; font-size: 12px; font-weight: bold;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+
+  /* Buscador */
+  .buscador {
+    width: 100%; background: var(--superficie); border: 1px solid var(--morado);
+    border-radius: 10px; padding: 11px 14px; color: var(--texto);
+    font-size: 14px; margin-bottom: 14px;
+  }
+  .buscador::placeholder { color: #6f6a85; }
+
+  /* Tarjeta servidor */
+  .tarjeta {
+    background: var(--superficie); border: 1.2px solid var(--morado);
+    border-radius: 12px; padding: 13px; margin-bottom: 12px; cursor: pointer;
+    transition: transform .08s ease, border-color .15s ease;
+  }
+  .tarjeta:hover { transform: translateY(-2px); border-color: var(--cian); }
+  .fila { display: flex; align-items: center; gap: 12px; }
+  .avatar {
+    width: 46px; height: 46px; border-radius: 50%; background: var(--morado);
+    display: grid; place-items: center; font-weight: bold; font-size: 18px;
+    flex: 0 0 auto; overflow: hidden;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .nombre { font-weight: bold; font-size: 16px; }
+  .rol { font-size: 12px; font-weight: bold; }
+  .rol.lider { color: var(--cian); }
+  .rol.servidor { color: #8b86a3; }
+  .chevron { color: #6f6a85; margin-left: auto; font-size: 22px; }
+  .metricas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .mchip {
+    border-radius: 20px; padding: 5px 10px; font-size: 11px; font-weight: bold;
+    display: inline-flex; align-items: center; gap: 6px; border: 1px solid;
+  }
+
+  /* Modal detalle */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7);
+    display: none; align-items: flex-start; justify-content: center;
+    padding: 24px 12px; overflow-y: auto; z-index: 20;
+  }
+  .overlay.abierto { display: flex; }
+  .modal {
+    background: var(--fondo); border: 1px solid #2a2440; border-radius: 16px;
+    width: 100%; max-width: 620px; padding: 0 0 18px; overflow: hidden;
+  }
+  .modal .cabecera {
+    background: linear-gradient(135deg, var(--morado), var(--cian));
+    padding: 20px; display: flex; align-items: center; gap: 14px;
+  }
+  .modal .cabecera .avatar { width: 64px; height: 64px; font-size: 24px; background: rgba(0,0,0,.25); }
+  .modal h2 { margin: 0; font-size: 20px; }
+  .cerrar {
+    margin-left: auto; background: rgba(0,0,0,.25); border: 0; color: #fff;
+    width: 34px; height: 34px; border-radius: 50%; font-size: 18px; cursor: pointer;
+  }
+  .seccion { padding: 16px 20px 0; }
+  .seccion h3 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .5px;
+    color: var(--cian); margin: 0 0 10px;
+  }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: 13px; }
+  .info-grid .k { color: var(--texto2); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 10px; }
+  .tile { background: var(--superficie); border-radius: 10px; padding: 12px 8px; text-align: center; }
+  .tile .n { font-size: 22px; font-weight: bold; }
+  .tile .l { font-size: 10px; color: var(--texto2); margin-top: 2px; }
+  .barra-cont { background: var(--superficie); border-radius: 6px; height: 10px; overflow: hidden; margin-top: 6px; }
+  .barra { height: 100%; border-radius: 6px; }
+  .lista-item {
+    background: var(--superficie); border-radius: 10px; padding: 11px 13px;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 10px;
+  }
+  .punto { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+  .lista-item .t { font-weight: bold; font-size: 14px; }
+  .lista-item .s { font-size: 12px; color: var(--texto2); }
+  .estado-tag { margin-left: auto; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px; }
+  .vacio { color: #6f6a85; font-size: 13px; padding: 4px 0 8px; }
+  @media (max-width: 520px) { .tiles { grid-template-columns: repeat(2,1fr); } .info-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="app">
+  <h1><span class="badge-icon">📊</span> Dashboard del Equipo</h1>
+  <div class="config">
+    <label><input type="checkbox" id="usarApi" /> Usar API real</label>
+    <input type="text" id="baseUrl" value="https://nehemias-cartero.onrender.com" size="34" />
+    <input type="text" id="equipoId" value="1" size="3" title="equipo_id" />
+    <button id="btnCargar">Cargar</button>
+    <span id="estado"></span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="resumen">
+    <div class="ministerio" id="ministerio">—</div>
+    <div class="chips">
+      <span class="chip">👥 <span id="totalServidores">0</span> servidores</span>
+      <span class="chip">⭐ <span id="totalLideres">0</span> líder(es)</span>
+    </div>
+  </div>
+
+  <input class="buscador" id="buscador" type="text" placeholder="Buscar servidor..." />
+  <div id="listaServidores"></div>
+</div>
+
+<!-- Modal de detalle -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+// ====== DATOS EMBEBIDOS (opcional) ======
+// Un generador puede reemplazar el null por { equipo:{...}, detalles:{...} } con
+// datos reales. Si EMBED != null, la maqueta lo usa en vez del mock / la API.
+const EMBED = /*__EMBED__*/ null;
+
+// ====== DATOS DE EJEMPLO (forma EXACTA de los endpoints del backend) ======
+
+// GET /api/dashboard_equipo?equipo_id=
+const MOCK_EQUIPO = {
+  status: "success",
+  nombre_ministerio: "Iglesia Multimedia",
+  servidores: [
+    { id: 1, nombre: "Gustavo Pisciotta", role: "admin",  foto_perfil: "", tareas_pendientes: 0, tareas_completadas: 14, tareas_rechazadas: 1, cumplimiento: 93, ultima_participacion: "25-05-2026" },
+    { id: 2, nombre: "María Gómez",        role: "user",   foto_perfil: "", tareas_pendientes: 2, tareas_completadas: 9,  tareas_rechazadas: 0, cumplimiento: 82, ultima_participacion: "18-05-2026" },
+    { id: 3, nombre: "Lucas Fernández",    role: "user",   foto_perfil: "", tareas_pendientes: 1, tareas_completadas: 3,  tareas_rechazadas: 3, cumplimiento: 50, ultima_participacion: "04-05-2026" },
+    { id: 4, nombre: "Sofía Ramírez",      role: "user",   foto_perfil: "", tareas_pendientes: 3, tareas_completadas: 1,  tareas_rechazadas: 0, cumplimiento: 25, ultima_participacion: "20-04-2026" },
+    { id: 5, nombre: "Nuevo Servidor",     role: "user",   foto_perfil: "", tareas_pendientes: 0, tareas_completadas: 0,  tareas_rechazadas: 0, cumplimiento: null, ultima_participacion: null },
+  ]
+};
+
+// GET /api/dashboard_servidor?user_id=  (uno por servidor de ejemplo)
+const MOCK_SERVIDOR = {
+  1: {
+    status: "success",
+    servidor: { id: 1, nombre: "Gustavo Pisciotta", email: "gustavo@iglesia.com", telefono: "+54 11 5555-1234", direccion: "Av. Siempre Viva 742", fecha_nacimiento: "12-03-1985", rol: "Líder", rol_db: "admin", foto_url: "", areas_permitidas: "Sonido, Proyección" },
+    metricas: { tareas_pendientes: 0, tareas_completadas: 14, tareas_rechazadas: 1, total_asignaciones: 15, cumplimiento: 93, racha: 6, ultima_participacion: "25-05-2026" },
+    historial: [
+      { id: 30, nombre: "Culto Domingo", fecha: "25-05-2026", area: "Sonido", status: "Aceptado" },
+      { id: 28, nombre: "Reunión Jóvenes", fecha: "18-05-2026", area: "Proyección", status: "Aceptado" },
+      { id: 25, nombre: "Culto Domingo", fecha: "11-05-2026", area: "Sonido", status: "Aceptado" },
+      { id: 22, nombre: "Vigilia", fecha: "03-05-2026", area: "Sonido", status: "Rechazado", motivo_rechazo: "Viaje familiar" },
+    ],
+    ausencias: [
+      { id: 7, fecha_inicio: "2026-07-10", fecha_fin: "2026-07-20", motivo: "Vacaciones" }
+    ]
+  },
+  2: {
+    status: "success",
+    servidor: { id: 2, nombre: "María Gómez", email: "maria@iglesia.com", telefono: "No", direccion: "", fecha_nacimiento: "30-09-1998", rol: "Servidora", rol_db: "user", foto_url: "", areas_permitidas: "Cámaras" },
+    metricas: { tareas_pendientes: 2, tareas_completadas: 9, tareas_rechazadas: 0, total_asignaciones: 11, cumplimiento: 82, racha: 4, ultima_participacion: "18-05-2026" },
+    historial: [
+      { id: 28, nombre: "Reunión Jóvenes", fecha: "18-05-2026", area: "Cámaras", status: "Aceptado" },
+      { id: 25, nombre: "Culto Domingo", fecha: "11-05-2026", area: "Cámaras", status: "Aceptado" },
+    ],
+    ausencias: []
+  },
+  3: {
+    status: "success",
+    servidor: { id: 3, nombre: "Lucas Fernández", email: "lucas@iglesia.com", telefono: "+54 11 4444-9876", direccion: "", fecha_nacimiento: "No", rol: "Servidor", rol_db: "user", foto_url: "", areas_permitidas: "Luces" },
+    metricas: { tareas_pendientes: 1, tareas_completadas: 3, tareas_rechazadas: 3, total_asignaciones: 7, cumplimiento: 50, racha: 0, ultima_participacion: "04-05-2026" },
+    historial: [
+      { id: 22, nombre: "Vigilia", fecha: "04-05-2026", area: "Luces", status: "Rechazado", motivo_rechazo: "Problema de salud" },
+      { id: 20, nombre: "Culto Domingo", fecha: "27-04-2026", area: "Luces", status: "Aceptado" },
+    ],
+    ausencias: [
+      { id: 9, fecha_inicio: "2026-06-05", fecha_fin: "2026-06-06", motivo: "Examen" }
+    ]
+  },
+  4: {
+    status: "success",
+    servidor: { id: 4, nombre: "Sofía Ramírez", email: "sofia@iglesia.com", telefono: "No", direccion: "", fecha_nacimiento: "No", rol: "Servidora", rol_db: "user", foto_url: "", areas_permitidas: "" },
+    metricas: { tareas_pendientes: 3, tareas_completadas: 1, tareas_rechazadas: 0, total_asignaciones: 4, cumplimiento: 25, racha: 1, ultima_participacion: "20-04-2026" },
+    historial: [
+      { id: 15, nombre: "Culto Domingo", fecha: "20-04-2026", area: "Bienvenida", status: "Aceptado" },
+    ],
+    ausencias: []
+  },
+  5: {
+    status: "success",
+    servidor: { id: 5, nombre: "Nuevo Servidor", email: "nuevo@iglesia.com", telefono: "No", direccion: "", fecha_nacimiento: "No", rol: "Servidor", rol_db: "user", foto_url: "", areas_permitidas: "" },
+    metricas: { tareas_pendientes: 0, tareas_completadas: 0, tareas_rechazadas: 0, total_asignaciones: 0, cumplimiento: null, racha: 0, ultima_participacion: null },
+    historial: [],
+    ausencias: []
+  }
+};
+
+// ====== Lógica de la maqueta ======
+let SERVIDORES = [];
+let MINISTERIO = "—";
+let DETALLE = null;       // detalle del servidor abierto en el modal
+let FILTRO = 'todos';     // filtro del historial: todos|Pendiente|Aceptado|Rechazado
+const BASE = () => document.getElementById('baseUrl').value.replace(/\/$/, '');
+
+const esLider = (s) => ['admin', 'líder'].includes(String(s.role || s.rol_db || '').toLowerCase());
+
+function colorCumplimiento(n) {
+  if (n === null || n === undefined) return '#6f6a85';
+  if (n >= 75) return 'var(--verde)';
+  if (n >= 40) return 'var(--naranja)';
+  return 'var(--rojo)';
+}
+function colorEstado(st) {
+  if (st === 'Aceptado') return 'var(--verde)';
+  if (st === 'Rechazado') return 'var(--rojo)';
+  return 'var(--naranja)';
+}
+function inicial(nombre) { return (nombre || '?').trim().charAt(0).toUpperCase() || '?'; }
+function avatarHtml(nombre, fotoUrl) {
+  if (fotoUrl) return `<div class="avatar"><img src="${fotoUrl}" alt=""></div>`;
+  return `<div class="avatar">${inicial(nombre)}</div>`;
+}
+
+function mchip(icono, texto, color) {
+  return `<span class="mchip" style="color:${color};border-color:${color};background:${color}26">${icono} ${texto}</span>`;
+}
+
+function renderResumen() {
+  document.getElementById('ministerio').textContent = MINISTERIO;
+  document.getElementById('totalServidores').textContent = SERVIDORES.length;
+  document.getElementById('totalLideres').textContent = SERVIDORES.filter(esLider).length;
+}
+
+function renderLista() {
+  const q = document.getElementById('buscador').value.toLowerCase().trim();
+  const filtrados = SERVIDORES.filter(s => (s.nombre || '').toLowerCase().includes(q));
+  const cont = document.getElementById('listaServidores');
+  if (filtrados.length === 0) { cont.innerHTML = '<div class="vacio" style="text-align:center;padding:40px">No hay servidores para mostrar</div>'; return; }
+
+  cont.innerHTML = filtrados.map(s => {
+    const lider = esLider(s);
+    const chips = [];
+    if (s.cumplimiento !== null && s.cumplimiento !== undefined)
+      chips.push(mchip('%', `${s.cumplimiento}% cumplimiento`, colorCumplimiento(s.cumplimiento)));
+    if (s.tareas_pendientes != null) chips.push(mchip('⏳', `${s.tareas_pendientes} pendientes`, 'var(--naranja)'));
+    if (s.tareas_completadas != null) chips.push(mchip('✓', `${s.tareas_completadas} completadas`, 'var(--verde)'));
+    if (s.tareas_rechazadas) chips.push(mchip('✕', `${s.tareas_rechazadas} rechazos`, 'var(--rojo)'));
+    if (s.ultima_participacion) chips.push(mchip('📅', `Último: ${s.ultima_participacion}`, 'var(--cian)'));
+
+    return `
+      <div class="tarjeta" onclick="abrirDetalle(${s.id})">
+        <div class="fila">
+          ${avatarHtml(s.nombre, s.foto_perfil ? BASE() + '/static/uploads/perfiles/' + s.foto_perfil : '')}
+          <div>
+            <div class="nombre">${s.nombre}</div>
+            <div class="rol ${lider ? 'lider' : 'servidor'}">${lider ? 'Líder / Admin' : 'Servidor'}</div>
+          </div>
+          <span class="chevron">›</span>
+        </div>
+        ${chips.length ? `<div class="metricas">${chips.join('')}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+async function abrirDetalle(id) {
+  let data;
+  if (EMBED && EMBED.detalles) {
+    data = EMBED.detalles[id] || EMBED.detalles[String(id)];
+  } else if (document.getElementById('usarApi').checked) {
+    try {
+      const r = await fetch(`${BASE()}/api/dashboard_servidor?user_id=${id}`);
+      data = await r.json();
+    } catch (e) { alert('No se pudo cargar el detalle desde la API: ' + e); return; }
+  } else {
+    data = MOCK_SERVIDOR[id];
+  }
+  if (!data || data.status !== 'success') { alert('Detalle no disponible'); return; }
+  DETALLE = data;
+  FILTRO = 'todos';
+  renderModal();
+}
+
+const ETIQUETA_FILTRO = { Pendiente: 'Pendientes', Aceptado: 'Completados', Rechazado: 'Rechazados' };
+
+function setFiltro(f) { FILTRO = f; renderModal(); }
+
+// Tile de estadística; si recibe `filtro` es clickeable y filtra el historial.
+function tileHtml(valor, etiqueta, color, filtro) {
+  const activo = filtro && FILTRO === filtro;
+  const estilo = activo ? `border:2px solid ${color};background:${color}2e;` : '';
+  const cursor = filtro ? 'cursor:pointer;' : '';
+  const click = filtro ? `onclick="setFiltro('${filtro}')"` : '';
+  return `<div class="tile" ${click} style="${cursor}${estilo}"><div class="n" style="color:${color}">${valor}</div><div class="l">${etiqueta}</div></div>`;
+}
+
+function renderModal() {
+  const data = DETALLE;
+  const s = data.servidor, m = data.metricas;
+  const lider = esLider(s);
+  const areas = (s.areas_permitidas || '').split(',').map(x => x.trim()).filter(Boolean);
+
+  const histFiltrado = FILTRO === 'todos' ? data.historial : data.historial.filter(h => h.status === FILTRO);
+  const historial = histFiltrado.length
+    ? histFiltrado.map(h => `
+        <div class="lista-item">
+          <span class="punto" style="background:${colorEstado(h.status)}"></span>
+          <div>
+            <div class="t">${h.nombre}</div>
+            <div class="s">${h.fecha} · ${h.area}</div>
+            ${(h.status === 'Rechazado' && h.motivo_rechazo) ? `<div class="s" style="color:var(--rojo)">Motivo: ${h.motivo_rechazo}</div>` : ''}
+          </div>
+          <span class="estado-tag" style="color:${colorEstado(h.status)};background:${colorEstado(h.status)}26">${h.status}</span>
+        </div>`).join('')
+    : `<div class="vacio">${FILTRO === 'todos' ? 'Sin cultos en el historial.' : 'No hay cultos "' + (ETIQUETA_FILTRO[FILTRO] || FILTRO) + '" en el historial.'}</div>`;
+
+  const ausencias = data.ausencias.length
+    ? data.ausencias.map(a => `
+        <div class="lista-item">
+          <span class="punto" style="background:var(--naranja)"></span>
+          <div>
+            <div class="t">${a.motivo || 'Sin motivo'}</div>
+            <div class="s">${a.fecha_inicio} → ${a.fecha_fin}</div>
+          </div>
+        </div>`).join('')
+    : '<div class="vacio">Sin ausencias registradas.</div>';
+
+  const cump = m.cumplimiento;
+  document.getElementById('modal').innerHTML = `
+    <div class="cabecera">
+      ${avatarHtml(s.nombre, s.foto_url)}
+      <div>
+        <h2>${s.nombre}</h2>
+        <div style="font-weight:bold;font-size:13px">${lider ? '⭐ ' + s.rol : s.rol}</div>
+      </div>
+      <button class="cerrar" onclick="cerrarDetalle()">✕</button>
+    </div>
+
+    <div class="seccion">
+      <h3>Indicadores</h3>
+      <div class="tiles">
+        ${tileHtml(cump === null ? '—' : cump + '%', 'Cumplimiento', colorCumplimiento(cump), 'todos')}
+        ${tileHtml('🔥 ' + m.racha, 'Racha', 'var(--cian)', null)}
+        ${tileHtml(m.tareas_pendientes, 'Pendientes', 'var(--naranja)', 'Pendiente')}
+        ${tileHtml(m.tareas_completadas, 'Completadas', 'var(--verde)', 'Aceptado')}
+        ${tileHtml(m.tareas_rechazadas, 'Rechazos', 'var(--rojo)', 'Rechazado')}
+      </div>
+      <div class="barra-cont"><div class="barra" style="width:${cump === null ? 0 : cump}%;background:${colorCumplimiento(cump)}"></div></div>
+    </div>
+
+    <div class="seccion">
+      <h3>Datos del servidor</h3>
+      <div class="info-grid">
+        <div><span class="k">Email:</span> ${s.email}</div>
+        <div><span class="k">Teléfono:</span> ${s.telefono}</div>
+        <div><span class="k">Nacimiento:</span> ${s.fecha_nacimiento}</div>
+        <div><span class="k">Última participación:</span> ${m.ultima_participacion || '—'}</div>
+        <div style="grid-column:1/-1"><span class="k">Áreas:</span> ${areas.length ? areas.join(', ') : '—'}</div>
+      </div>
+    </div>
+
+    <div class="seccion">
+      <h3>Historial de cultos <span style="font-size:11px;color:var(--texto2);text-transform:none;letter-spacing:0;font-weight:normal">${FILTRO === 'todos' ? '· tocá una estadística para filtrar' : '· filtro: ' + (ETIQUETA_FILTRO[FILTRO] || FILTRO)}</span></h3>
+      ${historial}
+    </div>
+
+    <div class="seccion">
+      <h3>Ausencias</h3>
+      ${ausencias}
+    </div>
+  `;
+  document.getElementById('overlay').classList.add('abierto');
+}
+
+function cerrarDetalle() { document.getElementById('overlay').classList.remove('abierto'); }
+document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') cerrarDetalle(); });
+
+async function cargar() {
+  const estado = document.getElementById('estado');
+  if (EMBED && EMBED.equipo) {
+    SERVIDORES = EMBED.equipo.servidores || [];
+    MINISTERIO = EMBED.equipo.nombre_ministerio || '—';
+    estado.textContent = ' (datos reales embebidos)';
+    renderResumen(); renderLista();
+    return;
+  }
+  if (document.getElementById('usarApi').checked) {
+    estado.textContent = ' Cargando…';
+    try {
+      const eq = document.getElementById('equipoId').value || 1;
+      const r = await fetch(`${BASE()}/api/dashboard_equipo?equipo_id=${eq}`);
+      const data = await r.json();
+      if (data.status !== 'success') throw new Error(data.message || 'respuesta inválida');
+      SERVIDORES = data.servidores || [];
+      MINISTERIO = data.nombre_ministerio || '—';
+      estado.textContent = ' ✓ API';
+    } catch (e) { estado.textContent = ' ✕ ' + e.message + ' (mostrando ejemplo)'; usarMock(); }
+  } else {
+    estado.textContent = ' (datos de ejemplo)';
+    usarMock();
+  }
+  renderResumen();
+  renderLista();
+}
+function usarMock() { SERVIDORES = MOCK_EQUIPO.servidores; MINISTERIO = MOCK_EQUIPO.nombre_ministerio; }
+
+document.getElementById('btnCargar').addEventListener('click', cargar);
+document.getElementById('buscador').addEventListener('input', renderLista);
+
+// Carga inicial con datos de ejemplo
+cargar();
+</script>
+</body>
+</html>

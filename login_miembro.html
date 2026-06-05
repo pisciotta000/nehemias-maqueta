@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nehemías · Maqueta Login de miembros</title>
+<!--
+  MAQUETA del login de miembros para la App 2 (congregación), según SUITE_NEHEMIAS.md.
+  DETALLE IMPORTANTE: reutiliza la autenticación que YA existe en el backend:
+    - Ingreso:  POST /api/login   (mismo endpoint que App 1)
+    - Registro: POST /api/registro (auto-registro -> rol base "miembro")
+  El login es ÚNICO para toda la suite; los ROLES deciden qué secciones ve cada uno.
+  Es solo un prototipo visual (datos de ejemplo, no usa el backend).
+-->
+<style>
+  :root{
+    --fondo:#0D0A15; --superficie:#1A1525; --morado:#7000FF; --cian:#4DD0E1;
+    --texto:#fff; --texto2:#B0AEC4; --verde:#43A047;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--fondo);color:var(--texto);font-family:"Segoe UI",Roboto,system-ui,sans-serif;
+    min-height:100vh;display:grid;place-items:center;padding:20px;}
+  .telefono{width:100%;max-width:380px;background:var(--fondo);border:1px solid #2a2440;border-radius:24px;
+    padding:34px 26px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+  .logo{width:80px;height:80px;border-radius:22px;margin:0 auto 14px;background:linear-gradient(135deg,var(--morado),var(--cian));
+    display:grid;place-items:center;font-size:38px;}
+  h1{text-align:center;font-size:22px;margin:0 0 2px;}
+  .sub{text-align:center;color:var(--texto2);font-size:13px;margin:0 0 24px;}
+  label.f{display:block;font-size:12px;color:var(--texto2);margin:12px 0 5px;}
+  input{width:100%;background:var(--superficie);border:1px solid #3a3357;color:#fff;border-radius:10px;
+    padding:12px 13px;font-size:14px;}
+  input:focus{outline:none;border-color:var(--morado);}
+  .fila{display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-size:12px;color:var(--texto2);}
+  .fila label{display:flex;align-items:center;gap:6px;cursor:pointer;}
+  .btn{width:100%;background:var(--morado);color:#fff;border:0;border-radius:12px;padding:14px;font-size:15px;
+    font-weight:bold;cursor:pointer;margin-top:20px;letter-spacing:.5px;}
+  .link{display:block;text-align:center;color:var(--cian);font-size:13px;margin-top:16px;cursor:pointer;background:none;border:0;width:100%;}
+  .nota{margin-top:22px;padding-top:16px;border-top:1px solid #2a2440;color:#6f6a85;font-size:11px;line-height:1.5;text-align:center;}
+  .ok{margin-top:16px;background:var(--superficie);border:1px solid var(--verde);border-radius:12px;padding:14px;font-size:13px;}
+  .ok .chip{display:inline-block;background:#43A04726;color:var(--verde);border-radius:12px;padding:2px 9px;font-weight:bold;font-size:11px;margin:3px 4px 0 0;}
+  .err{color:#ff8a80;font-size:12px;margin-top:10px;text-align:center;}
+  .seccion-list{margin:8px 0 0;padding-left:18px;color:var(--texto2);font-size:12px;}
+  .regtabs{display:flex;gap:8px;margin:4px 0 4px;}
+  .regtab{flex:1;background:var(--superficie);color:var(--texto2);border:1px solid #3a3357;border-radius:10px;
+    padding:9px 6px;font-size:12px;font-weight:bold;cursor:pointer;}
+  .regtab.activo{background:#7000FF26;color:#b388ff;border-color:var(--morado);}
+  .hint{color:#6f6a85;font-size:11px;margin:6px 0 0;line-height:1.4;}
+</style>
+</head>
+<body>
+  <div class="telefono" id="app"></div>
+
+<script>
+// Backend real de la suite (mismo de la App 1, AGENTS.md §5).
+const API_PROD='https://nehemias-cartero.onrender.com';
+const API_LOCAL='http://localhost:5000';
+// Por defecto producción; con ?api= se puede forzar otro. El selector de abajo lo cambia.
+let API = (function(){
+  const q = new URLSearchParams(location.search).get('api');
+  return q ? q.replace(/\/$/,'') : API_PROD;
+})();
+function setBackend(u){ API=u; render(); }
+// Iglesias ya registradas (demo). En real, el backend valida contra la tabla Iglesia.
+const IGLESIAS_DEMO = ['Multimedia - Rajem', 'Iglesia Central', 'Comunidad de Fe'];
+
+let MODO = 'login';     // 'login' | 'registro'
+let REG_TIPO = 'unir';  // en registro: 'unir' (miembro) | 'crear' (pastor general da de alta la iglesia)
+
+function render(){
+  document.getElementById('app').innerHTML = MODO==='login' ? vistaLogin() : vistaRegistro();
+}
+function setRegTipo(t){ REG_TIPO=t; render(); }
+
+function vistaLogin(){
+  return `
+    <div class="logo">⛪</div>
+    <h1>Nehemías</h1>
+    <p class="sub">Ingresá a tu cuenta de la congregación</p>
+    <div style="background:var(--superficie);border:1px solid #3a3357;border-radius:10px;padding:9px 11px;font-size:11px;color:var(--texto2);margin-bottom:6px">
+      Backend: <b style="color:var(--cian);word-break:break-all">${API}</b>
+      <div style="display:flex;gap:6px;margin-top:7px">
+        <button class="regtab ${API===API_PROD?'activo':''}" style="padding:6px" onclick="setBackend('${API_PROD}')">Producción</button>
+        <button class="regtab ${API===API_LOCAL?'activo':''}" style="padding:6px" onclick="setBackend('${API_LOCAL}')">Local (5000)</button>
+      </div>
+      <div class="hint" style="margin-top:6px">Para ver las <b>métricas</b> de tu equipo elegí <b>Local</b> (producción aún no tiene ese endpoint).</div>
+    </div>
+    <label class="f">Correo electrónico</label>
+    <input id="email" type="email" placeholder="tucorreo@email.com">
+    <label class="f">Contraseña</label>
+    <input id="pass" type="password" placeholder="••••••••">
+    <div class="fila">
+      <label><input type="checkbox" id="recordar" checked> Recordarme</label>
+      <button class="link" style="width:auto;margin:0" onclick="olvide()">¿Olvidaste tu contraseña?</button>
+    </div>
+    <button class="btn" onclick="ingresar()">INGRESAR</button>
+    <button class="link" onclick="MODO='registro';render()">¿Sos nuevo? Creá tu cuenta</button>
+    <div id="salida"></div>
+    <div style="margin-top:18px;text-align:center;font-size:12px;color:var(--texto2)">Demo rápida (datos de ejemplo) — entrar como:
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn" style="margin:0;background:var(--superficie);font-size:13px" onclick="demo('miembro')">Miembro</button>
+        <button class="btn" style="margin:0;font-size:13px" onclick="demo('lider')">Líder</button>
+        <button class="btn" style="margin:0;background:var(--superficie);font-size:13px" onclick="demo('pastor')">Pastor</button>
+      </div>
+    </div>
+    <p class="nota"><b>INGRESAR</b> usa tu <b>cuenta real</b> (<b>POST /api/login</b>, el mismo de la App 1):
+      trae tu <b>rol real</b> y los datos <b>reales de tu equipo</b>. Los <b>roles se comparten con
+      Nehemías Planificador</b>.<br>
+      <span style="color:#6f6a85">Los botones de Demo usan datos de ejemplo (no tocan el backend).</span></p>`;
+}
+
+function vistaRegistro(){
+  const tab=(t,txt)=>`<button class="regtab ${REG_TIPO===t?'activo':''}" onclick="setRegTipo('${t}')">${txt}</button>`;
+  const crear = REG_TIPO==='crear';
+  const campoIglesia = crear
+    ? `<label class="f">Nombre de la iglesia nueva</label>
+       <input id="r_iglesia" placeholder="Ej: Iglesia Rajem">
+       <p class="hint">Vas a ser el <b>pastor general</b> de esta iglesia. El nombre <b>no puede repetirse</b> con otra ya registrada.</p>`
+    : `<label class="f">Nombre de tu iglesia</label>
+       <input id="r_iglesia" placeholder="Elegí tu iglesia" list="iglesias_demo">
+       <datalist id="iglesias_demo">${IGLESIAS_DEMO.map(i=>`<option value="${i}">`).join('')}</datalist>
+       <p class="hint">Entrás <b>como miembro</b>. Los roles superiores los asigna luego un líder/pastor o una invitación de equipo.</p>`;
+  return `
+    <div class="logo">⛪</div>
+    <h1>Crear cuenta</h1>
+    <p class="sub">${crear?'Registrá tu iglesia (sos el pastor general)':'Unite a tu iglesia como miembro'}</p>
+    <div class="regtabs">${tab('unir','Unirme a mi iglesia')}${tab('crear','Registrar iglesia nueva')}</div>
+    <label class="f">Nombre y apellido</label>
+    <input id="r_nombre" placeholder="Tu nombre">
+    ${campoIglesia}
+    <label class="f">Correo electrónico</label>
+    <input id="r_email" type="email" placeholder="tucorreo@email.com">
+    <label class="f">Contraseña</label>
+    <input id="r_pass" type="password" placeholder="Elegí una contraseña">
+    <button class="btn" onclick="registrar()">${crear?'REGISTRAR IGLESIA':'CREAR CUENTA'}</button>
+    <button class="link" onclick="MODO='login';render()">← Ya tengo cuenta, ingresar</button>
+    <div id="salida"></div>
+    <p class="nota">Usa <b>POST /api/registro</b>. El <b>primero</b> que da de alta una iglesia es su
+      <b>pastor general</b>; los que se registran después entran como <b>miembro</b>. Si un equipo
+      te invita por Nehemías, sumás el rol <b>servidor</b> automáticamente.</p>`;
+}
+
+// Login REAL contra el backend (mismo /api/login de la App 1). Trae tu rol real.
+async function ingresar(){
+  const email = document.getElementById('email').value.trim();
+  const pass = document.getElementById('pass').value;
+  const out = document.getElementById('salida');
+  if(!email || !pass){ out.innerHTML='<div class="err">Completá correo y contraseña.</div>'; return; }
+  out.innerHTML = '<div class="ok" style="border-color:var(--cian)">Ingresando… <span style="color:var(--texto2)">(si el backend estaba dormido, Render puede tardar ~30s)</span></div>';
+  try{
+    const r = await fetch(API+'/api/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, password:pass})
+    });
+    const data = await r.json();
+    if(r.status===200 && data.status==='success' && data.user){
+      const u = data.user;
+      // Guardamos la sesión real para que el home la use (nombre + rol + equipo real).
+      sessionStorage.setItem('neh_sesion', JSON.stringify({
+        id:u.id, nombre:u.nombre, rol:u.role, equipo_id:u.equipo_id
+      }));
+      // Pasamos el backend elegido por la URL (más fiable que sessionStorage en file://).
+      location.href = 'home_miembro.html?real=1&api=' + encodeURIComponent(API);
+    } else {
+      out.innerHTML = `<div class="err">${data.message || 'Correo o contraseña incorrectos.'}</div>`;
+    }
+  }catch(e){
+    out.innerHTML = `<div class="err">No se pudo conectar con el backend (${e.message}).<br>
+      Puede ser el arranque de Render (esperá ~30s y reintentá) o un bloqueo de <b>CORS</b> al
+      abrir la maqueta como archivo local. Mientras tanto podés usar la <b>demo</b> de abajo.</div>`;
+  }
+}
+
+function registrar(){
+  const nombre=document.getElementById('r_nombre').value.trim();
+  const iglesia=document.getElementById('r_iglesia').value.trim();
+  const email=document.getElementById('r_email').value.trim();
+  const pass=document.getElementById('r_pass').value;
+  const out=document.getElementById('salida');
+  if(!nombre||!iglesia||!email||!pass){ out.innerHTML='<div class="err">Completá todos los campos (incluida tu iglesia).</div>'; return; }
+  const existe = IGLESIAS_DEMO.some(i=>i.toLowerCase()===iglesia.toLowerCase());
+
+  if(REG_TIPO==='crear'){
+    // Alta de iglesia nueva: el nombre NO puede repetirse (multi-tenant, §12.5).
+    if(existe){
+      out.innerHTML = `<div class="err">Ya existe una iglesia llamada "<b>${iglesia}</b>".
+        El nombre no puede repetirse. Si es tu iglesia, unite <b>como miembro</b> (pestaña de arriba).</div>`;
+      return;
+    }
+    IGLESIAS_DEMO.push(iglesia); // queda registrada
+    out.innerHTML = `
+      <div class="ok">
+        <div>✓ Iglesia <b>${iglesia}</b> registrada</div>
+        <div style="margin-top:8px">Quedás como <span class="chip" style="background:#7000FF26;color:#b388ff">pastor general</span></div>
+        <div style="color:var(--texto2);margin-top:8px">Los que se registren con esta iglesia entran como
+          <b>miembro</b>; vos (u otros líderes/pastores) les vas cambiando el rol.</div>
+        <button class="btn" style="margin-top:14px" onclick="location.href='home_miembro.html?rol=pastor'">Entrar a la app →</button>
+      </div>`;
+    return;
+  }
+
+  // Unirse a una iglesia existente -> miembro.
+  if(!existe){
+    out.innerHTML = `<div class="err">No encontramos la iglesia "<b>${iglesia}</b>".
+      Si todavía no está en Nehemías, registrala como <b>nueva</b> (pestaña de arriba) y serás el pastor general.</div>`;
+    return;
+  }
+  out.innerHTML = `
+    <div class="ok">
+      <div>✓ Cuenta creada para <b>${nombre}</b></div>
+      <div style="margin-top:6px">Iglesia: <b>${iglesia}</b></div>
+      <div style="margin-top:8px">Entrás <b>exclusivamente como</b>: <span class="chip">miembro</span></div>
+      <div style="color:var(--texto2);margin-top:8px">Si un equipo te invita por Nehemías, sumás
+        automáticamente el rol <span class="chip" style="background:#7000FF26;color:#b388ff">servidor</span>.
+        Los demás roles los asigna un líder/pastor.</div>
+      <button class="btn" style="margin-top:14px" onclick="location.href='home_miembro.html?rol=miembro'">Entrar a la app →</button>
+    </div>`;
+}
+
+// Demo con datos de ejemplo: limpia cualquier sesión real para no mezclar.
+function demo(rol){ sessionStorage.removeItem('neh_sesion'); location.href='home_miembro.html?rol='+rol; }
+
+function olvide(){
+  document.getElementById('salida').innerHTML =
+    '<div class="ok" style="border-color:var(--cian)">Te enviaríamos un código de recuperación por correo (usa <b>/api/olvide_password</b>, ya existe en el backend).</div>';
+}
+
+render();
+</script>
+</body>
+</html>

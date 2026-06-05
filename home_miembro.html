@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nehemías · Maqueta Home del miembro</title>
+<!--
+  MAQUETA del "home" de la App 2 (congregación) tras ingresar. Usa los MISMOS
+  colores de la App 1 de Nehemías (ver AGENTS.md §4).
+  - Esta app NO es para aceptar servicios/tareas (eso queda en la App 1): no hay
+    pestaña de "Servicios".
+  - Miembro: Inicio (eventos + avisos), Familia, Perfil.
+  - Líder: + "Mi equipo" (dashboard de su equipo).
+  - Pastor general: + "Panel" con métricas como en la web: grupos/equipos con su
+    % de aceptación, drill-down a cada equipo y a cada servidor.
+  Prototipo visual con datos de ejemplo (no usa el backend).
+-->
+<style>
+  :root{
+    /* Paleta EXACTA de la App 1 (AGENTS.md §4) */
+    --fondo:#0D0A15; --superficie:#1A1525; --superficie2:#221C2B; --morado:#7000FF;
+    --cian:#4DD0E1; --texto:#FFFFFF; --texto2:#B0AEC4; --verde:#43A047; --naranja:#FB8C00; --rojo:#E53935;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#0D0A15;color:var(--texto);font-family:"Segoe UI",Roboto,system-ui,sans-serif;
+    min-height:100vh;display:grid;place-items:center;padding:20px;}
+  .telefono{width:100%;max-width:390px;height:790px;background:var(--fondo);border:1px solid #2a2440;
+    border-radius:28px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.55);position:relative;}
+
+  .appbar{padding:20px 18px 14px;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#15102a,var(--fondo));}
+  .avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--morado),var(--cian));display:grid;place-items:center;font-weight:bold;font-size:18px;flex:0 0 auto;}
+  .appbar .hola{font-size:13px;color:var(--texto2);}
+  .appbar .nombre{font-size:17px;font-weight:bold;}
+  .appbar .topacts{margin-left:auto;display:flex;align-items:center;gap:1px;}
+  .appbar .campana{position:relative;background:none;border:0;color:var(--texto);cursor:pointer;padding:7px;border-radius:50%;line-height:0;}
+  .appbar .campana:hover{background:#ffffff14;}
+  .appbar .campana.activo{color:var(--cian);}
+  .appbar .campana .mi{width:24px;height:24px;fill:currentColor;display:block;}
+  .punto-rojo{position:absolute;top:3px;right:3px;width:9px;height:9px;background:var(--rojo);border-radius:50%;border:2px solid var(--fondo);}
+
+  /* Panel de notificaciones de la semana (se abre con la campana) */
+  .notis-overlay{position:absolute;inset:0;background:rgba(0,0,0,.45);display:none;z-index:5;}
+  .notis-overlay.abierto{display:block;}
+  .notis{position:absolute;top:60px;left:10px;right:10px;background:var(--superficie);border:1px solid #2a2440;
+    border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.6);z-index:6;display:none;overflow:hidden;max-height:74%;}
+  .notis.abierto{display:flex;flex-direction:column;}
+  .notis-head{padding:12px 14px;font-weight:bold;font-size:14px;border-bottom:1px solid #2a2440;display:flex;align-items:center;gap:8px;color:var(--cian);}
+  .notis-list{overflow-y:auto;}
+  .noti{display:flex;gap:11px;padding:11px 14px;border-bottom:1px solid #221c2b;}
+  .noti:last-child{border-bottom:0;}
+  .noti .nico{width:34px;height:34px;border-radius:50%;background:var(--superficie2);display:grid;place-items:center;font-size:17px;flex:0 0 auto;}
+  .noti .ntxt{font-size:13px;line-height:1.4;}
+  .noti .nmeta{color:var(--texto2);font-size:11px;margin-top:3px;}
+  .noti.nuevo{background:#4DD0E10f;}
+  .notis-vacio{padding:18px 14px;color:var(--texto2);font-size:13px;text-align:center;}
+
+  .rolbar{padding:8px 14px;background:var(--superficie);display:flex;align-items:center;gap:8px;font-size:11px;color:var(--texto2);}
+  .rolbar select{background:var(--fondo);color:#fff;border:1px solid #3a3357;border-radius:7px;padding:4px 7px;font-size:11px;}
+
+  .contenido{flex:1;overflow-y:auto;padding:16px;}
+  .seccion-tit{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--cian);margin:4px 0 12px;font-weight:bold;}
+  .seccion-tit.mt{margin-top:24px;}
+
+  .evento{background:var(--superficie);border-radius:14px;overflow:hidden;margin-bottom:14px;}
+  .evento .banner{height:96px;display:grid;place-items:center;font-size:42px;}
+  .evento .cuerpo{padding:13px;}
+  .evento .titulo{font-weight:bold;font-size:16px;}
+  .evento .meta{color:var(--texto2);font-size:12px;margin-top:3px;}
+  .evento .desc{color:var(--texto2);font-size:12.5px;margin-top:7px;line-height:1.45;}
+  .badge-canal{display:inline-block;background:#4DD0E126;color:var(--cian);border-radius:12px;padding:2px 9px;font-size:10px;font-weight:bold;margin-top:8px;}
+  /* Pie de la tarjeta de evento con la acción de compartir */
+  .evento .pie{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
+  .btn-compartir{display:inline-flex;align-items:center;gap:6px;background:#7000FF22;color:#b388ff;
+    border:1px solid #7000FF55;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;}
+  .btn-compartir:active{background:#7000FF40;}
+
+  .aviso{display:flex;gap:10px;background:var(--superficie2);border-radius:10px;padding:11px 12px;margin-bottom:9px;}
+  .aviso .ico{font-size:18px;}
+  .aviso .txt{font-size:13px;}
+  .aviso .fecha{color:var(--texto2);font-size:11px;margin-top:2px;}
+
+  .item{display:flex;align-items:center;gap:12px;background:var(--superficie);border-radius:11px;padding:12px;margin-bottom:9px;}
+  .item.click{cursor:pointer;}
+  .item .mini{width:42px;height:42px;border-radius:50%;background:var(--morado);display:grid;place-items:center;font-weight:bold;flex:0 0 auto;}
+  .item .nombre{font-weight:bold;}
+  .item .meta{color:var(--texto2);font-size:12px;}
+  .chevron{margin-left:auto;color:#6f6a85;font-size:22px;}
+  .chip{display:inline-block;background:#7000FF26;color:#b388ff;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:bold;margin:3px 4px 0 0;}
+  .metricas{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .mchip{border-radius:20px;padding:3px 8px;font-size:11px;font-weight:bold;display:inline-flex;align-items:center;gap:5px;border:1px solid;}
+
+  /* Encabezado de dashboard de equipo */
+  .cab-equipo{background:linear-gradient(135deg,var(--morado),var(--cian));border-radius:14px;padding:16px;margin-bottom:14px;}
+  .cab-equipo .pct{font-size:34px;font-weight:bold;}
+  .cab-equipo .l{font-size:13px;opacity:.9;}
+  /* Tiles del detalle */
+  .tiles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+  .tile{flex:1;min-width:78px;background:var(--superficie);border-radius:10px;padding:11px 6px;text-align:center;}
+  .tile .n{font-size:19px;font-weight:bold;}
+  .tile .l{font-size:10px;color:var(--texto2);margin-top:2px;}
+  .tile.click{cursor:pointer;border:1px solid transparent;}
+  .tile.act{border-color:var(--cian);background:#4DD0E126;}
+  .punto{width:10px;height:10px;border-radius:50%;flex:0 0 auto;}
+  /* Filtros (matrimonios/noviazgos) y botón de asistencia */
+  .filtros{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .fbtn{background:var(--superficie2);color:var(--texto2);border:1px solid #3a3357;border-radius:20px;padding:6px 13px;font-size:12px;cursor:pointer;}
+  .fbtn.activo{background:#4DD0E126;color:var(--cian);border-color:var(--cian);}
+  .asis{border:0;border-radius:9px;padding:7px 9px;font-size:11px;font-weight:bold;cursor:pointer;flex:0 0 auto;align-self:center;}
+  .asis.si{background:#43A04726;color:var(--verde);}
+  .asis.no{background:#E5393526;color:var(--rojo);}
+
+  .btn{width:100%;background:var(--morado);color:#fff;border:0;border-radius:11px;padding:12px;font-size:14px;font-weight:bold;cursor:pointer;margin-top:8px;}
+  .btn.sec{background:var(--superficie2);}
+  .volver{background:var(--superficie2);color:#fff;border:0;border-radius:9px;padding:8px 12px;font-size:12px;font-weight:bold;cursor:pointer;margin-bottom:14px;}
+  label.f{display:block;font-size:12px;color:var(--texto2);margin:10px 0 4px;}
+  input,select.full,textarea.full{width:100%;background:var(--fondo);border:1px solid #3a3357;color:#fff;border-radius:9px;padding:10px;font-size:13px;font-family:inherit;}
+  textarea.full{resize:vertical;}
+  .fila2{display:flex;gap:9px;} .fila2>div{flex:1;}
+  .rolesbox{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px;}
+  .rolesbox label{display:flex;align-items:center;gap:5px;background:var(--fondo);border:1px solid #3a3357;border-radius:9px;padding:7px 10px;font-size:12px;cursor:pointer;}
+  .rolesbox input{width:auto;}
+  .switch{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;cursor:pointer;}
+  .switch input{width:auto;}
+  .ok{color:var(--verde);font-size:12px;margin-top:8px;}
+  .vacio{color:#6f6a85;font-size:13px;}
+
+  .nav{display:flex;background:var(--superficie);border-top:1px solid #2a2440;}
+  .nav button{flex:1;background:none;border:0;color:var(--texto2);padding:10px 2px 12px;font-size:10.5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .nav button .i{line-height:0;}
+  .nav button .mi{width:23px;height:23px;fill:currentColor;display:block;}
+  .nav button.activo{color:var(--cian);}
+
+  /* Certificado (bautismo / presentación) §7.8 — temático según el tipo */
+  .cert{border-radius:16px;padding:10px;margin-bottom:8px;position:relative;overflow:hidden;}
+  .cert .orla{border-radius:14px;padding:18px 16px;text-align:center;position:relative;z-index:1;}
+  .cert .emoji-top{font-size:34px;line-height:1.1;margin-bottom:2px;}
+  .cert .ig{font-size:10px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;}
+  .cert h2{font-size:19px;margin:6px 0 12px;letter-spacing:.5px;}
+  .cert .cuerpo{font-size:13.5px;line-height:1.8;}
+  .cert .testigos{font-size:11px;margin-top:12px;opacity:.85;}
+  /* Guirnalda decorativa en las esquinas (no formal) */
+  .cert .deco span{position:absolute;font-size:20px;opacity:.55;z-index:0;pointer-events:none;}
+  .cert .sellos{display:flex;justify-content:space-around;margin-top:20px;position:relative;z-index:1;}
+  .cert .sello{width:78px;height:78px;border:2px dashed currentColor;border-radius:50%;display:flex;
+    align-items:center;justify-content:center;text-align:center;font-size:9px;padding:8px;transform:rotate(-7deg);opacity:.85;}
+  .cert .sello-img{width:84px;height:84px;display:flex;align-items:center;justify-content:center;}
+  .cert .sello-img img{max-width:84px;max-height:84px;object-fit:contain;}
+
+  /* 🍼 Tema "bebé" para el certificado de PRESENTACIÓN — color según el sexo */
+  .cert.tema-bebe{color:#5b4a6b;font-family:"Trebuchet MS","Segoe UI",sans-serif;}
+  /* 💙 Varón → celeste */
+  .cert.tema-bebe.varon{background:linear-gradient(135deg,#cdeafe,#e8f6ff);}
+  .cert.tema-bebe.varon .orla{border:3px dashed #5cb3f0;background:rgba(255,255,255,.6);}
+  .cert.tema-bebe.varon .ig{color:#2f8fd6;}
+  .cert.tema-bebe.varon h2{color:#1f6fb2;}
+  /* 💗 Nena → rosa */
+  .cert.tema-bebe.nena{background:linear-gradient(135deg,#fde0ee,#fff0f6);}
+  .cert.tema-bebe.nena .orla{border:3px dashed #f7a8c4;background:rgba(255,255,255,.6);}
+  .cert.tema-bebe.nena .ig{color:#e0719f;}
+  .cert.tema-bebe.nena h2{color:#c2418a;}
+
+  /* 💧 Tema "agua" para el certificado de BAUTISMO */
+  .cert.tema-bautismo{background:linear-gradient(160deg,#bbdefb,#e1f5fe);color:#0d3b5c;
+    font-family:Georgia,"Times New Roman",serif;}
+  .cert.tema-bautismo .orla{border:3px solid #4fc3f7;background:rgba(255,255,255,.55);}
+  .cert.tema-bautismo .ig{color:#0277bd;}
+  .cert.tema-bautismo h2{color:#0288d1;}
+</style>
+</head>
+<body>
+  <div class="telefono">
+    <div class="appbar">
+      <div class="avatar" id="ab_av">L</div>
+      <div><div class="hola">¡Hola!</div><div class="nombre" id="ab_nombre">Lucía Gómez</div></div>
+      <div class="topacts">
+        <button class="campana" id="ab_familia" onclick="irTab('familia')" title="Mi familia" aria-label="Mi familia"></button>
+        <button class="campana" id="ab_perfil" onclick="irTab('perfil')" title="Mi perfil" aria-label="Mi perfil"></button>
+        <button class="campana" id="ab_campana" onclick="toggleNotis()" aria-label="Notificaciones"></button>
+      </div>
+    </div>
+    <div class="rolbar">
+      Ver como:
+      <select id="rolSel" onchange="setRol(this.value)">
+        <option value="miembro">Miembro</option>
+        <option value="lider">Líder de equipo</option>
+        <option value="pastor">Pastor general</option>
+      </select>
+      <span style="margin-left:auto">demo de roles</span>
+    </div>
+    <div class="contenido" id="cont"></div>
+    <div class="nav" id="nav"></div>
+
+    <!-- Notificaciones de la semana (se abre con la campana) -->
+    <div class="notis-overlay" id="notisOverlay" onclick="cerrarNotis()"></div>
+    <div class="notis" id="notisPanel">
+      <div class="notis-head">🔔 Notificaciones de la semana</div>
+      <div class="notis-list" id="notisList"></div>
+    </div>
+  </div>
+
+<script>
+const DATA = {
+  miembro: {nombre:'Lucía Gómez', email:'lucia@iglesia.com', direccion:'Belgrano 850', ocupacion:'Estudiante', iglesia:'Multimedia - Rajem', equipo:'Multimedia', cumple:'1998-07-12', aniversario:''},
+  eventos: [
+    {titulo:'Vigilia de Jóvenes', fecha:'14-06-2026', hora:'21:00', lugar:'Templo central', emoji:'🔥', color:'linear-gradient(135deg,#7000FF,#E91E63)', desc:'¡Una noche de adoración y palabra para toda la juventud! Traé a un amigo. Habrá alabanza en vivo.'},
+    {titulo:'Culto de Bautismos', fecha:'22-06-2026', hora:'10:00', lugar:'Templo central', emoji:'💧', color:'linear-gradient(135deg,#0277BD,#4DD0E1)', desc:'Celebramos a los hermanos que sellan su decisión en las aguas del bautismo. ¡Acompañalos!'},
+    {titulo:'Reunión de Damas', fecha:'28-06-2026', hora:'17:00', lugar:'Salón anexo', emoji:'🌷', color:'linear-gradient(135deg,#AD1457,#FB8C00)', desc:'Una tarde especial para las mujeres de la iglesia: charla, café y comunión.'},
+  ],
+  avisos: [
+    {ico:'📢', txt:'Este domingo hay una sola reunión a las 10 hs.', fecha:'hace 2 días'},
+    {ico:'🎂', txt:'¡Feliz cumple a los hermanos de junio!', fecha:'hace 4 días'},
+  ],
+  // Los hijos llevan edad → quedan clasificados por grupo etario (§7.7):
+  // 🎒 Escuelita 4-12 · 🙌 Jóvenes 13-30 · 🧑 Miembro 31+ · 👶 menor de 4.
+  familia: [{rel:'Cónyuge', nombre:'—'}, {rel:'Hijo/a', nombre:'Mateo Gómez', edad:8, grupo:'escuelita'}],
+  roles: ['miembro'],
+  // Integrantes que los miembros cargan en su grupo familiar (§7.7). Alimentan los
+  // dashboards de Escuelita (4-12) y Jóvenes (13-30). asiste = viene a las reuniones.
+  integrantesGF: [
+    {nombre:'Mateo Gómez', edad:8, asiste:true, responsable:'Lucía Gómez'},
+    {nombre:'Sol Pisciotta', edad:5, asiste:true, responsable:'Gustavo Pisciotta'},
+    {nombre:'Thiago Ruiz', edad:6, asiste:false, responsable:'Daniel Ruiz'},
+    {nombre:'Brisa Pérez', edad:11, asiste:true, responsable:'Antonio Pérez'},
+    {nombre:'Joaquín Medina', edad:9, asiste:true, responsable:'Carlos Medina'},
+    {nombre:'Lucas Romero', edad:14, asiste:true, responsable:'Brenda Díaz'},
+    {nombre:'Camila Díaz', edad:17, asiste:false, responsable:'Brenda Díaz'},
+    {nombre:'Nahuel Sosa', edad:22, asiste:true, responsable:'Julieta Ferreyra'},
+    {nombre:'Abril Ferreyra', edad:27, asiste:true, responsable:'Tomás Sosa'},
+    {nombre:'Milagros Núñez', edad:19, asiste:false, responsable:'María Núñez'},
+  ],
+  // Aniversarios que ve el LÍDER del equipo de Matrimonios (nombre y apellido de ambos).
+  // tipo: 'matrimonio' o 'noviazgo' (noviazgo con propósito). asiste: viene a las reuniones.
+  // Los cargan los miembros al sumar a su cónyuge / pareja al grupo familiar.
+  aniversarios: [
+    {conyuge1:'Gustavo Pisciotta', conyuge2:'Ana Pisciotta', fecha:'2014-06-05', tipo:'matrimonio', asiste:true},
+    {conyuge1:'Daniel Ruiz', conyuge2:'Cecilia Ruiz', fecha:'2009-11-21', tipo:'matrimonio', asiste:false},
+    {conyuge1:'Antonio Pérez', conyuge2:'Sofía Pérez', fecha:'2018-03-10', tipo:'matrimonio', asiste:true},
+    {conyuge1:'Lucas Romero', conyuge2:'Brenda Díaz', fecha:'2024-09-15', tipo:'noviazgo', asiste:true},
+    {conyuge1:'Tomás Sosa', conyuge2:'Julieta Ferreyra', fecha:'2025-02-20', tipo:'noviazgo', asiste:false},
+  ],
+  // Liderazgo de cada equipo con función especial (Matrimonios §7.9, Jóvenes/Escuelita §7.10):
+  // el líder suma servidores/miembros para ayudar, con permiso de ver los datos del equipo.
+  // rol: Líder / Co-líder / Colaborador. vePuede: ve los datos (aniversarios / integrantes).
+  liderazgo: {
+    matrimonios:[{nombre:'Gustavo Pisciotta', rol:'Líder', vePuede:true}],
+    jovenes:[{nombre:'Macarena Fernandez', rol:'Líder', vePuede:true}],
+    escuelita:[{nombre:'Pablo Ortigoza', rol:'Líder', vePuede:true}],
+  },
+  // Bandas de edad. SOLO el pastor las edita (desde el Panel, §7.10): define desde/hasta
+  // qué edad y si el grupo está activo (una iglesia puede no tener alguno). El dashboard de
+  // Jóvenes agrupa las bandas "adolescentes" + "jovenes" (sus dos sub-grupos).
+  rangosEdad: {
+    escuelita:    {min:4,  max:12, activo:true},
+    adolescentes: {min:13, max:17, activo:true},
+    jovenes:      {min:18, max:30, activo:true},
+  },
+  // Gestión (líder/pastor): directorio de miembros, bautismos y presentaciones
+  directorio: [
+    {nombre:'Gustavo Pisciotta', roles:['miembro','servidor','lider','pastor'], equipo:'EQ Ministerial', tel:'+54 11 5555-1234', nuevo:false},
+    {nombre:'Macarena Fernandez', roles:['miembro','servidor','lider','pastor_ministerial'], equipo:'EQ Ministerial', tel:'No', nuevo:false},
+    {nombre:'Pablo Ortigoza', roles:['miembro','servidor'], equipo:'Multimedia', tel:'No', nuevo:false},
+    {nombre:'Lucía Gómez', roles:['miembro'], equipo:'—', tel:'No', nuevo:true},
+    {nombre:'Daniel Ruiz', roles:['miembro','servidor'], equipo:'Multimedia', tel:'No', nuevo:false},
+  ],
+  bautismos: [
+    {miembro:'Pablo Ortigoza', fecha:'2026-01-19', lugar:'Templo central'},
+    {miembro:'Lucía Gómez', fecha:'2026-03-23', lugar:'Templo central'},
+    {miembro:'Daniel Ruiz', fecha:'2026-03-23', lugar:'Templo central'},
+    {miembro:'Carla Méndez', fecha:'2026-05-04', lugar:'Río'},
+  ],
+  presentaciones: [
+    {nino:'Mía Pisciotta', fecha:'2026-03-15', padres:'Gustavo y Ana', lugarNac:'Hospital Central'},
+    {nino:'Benjamín Pérez', fecha:'2026-05-10', padres:'Antonio y Sofía', lugarNac:'Clínica del Sol'},
+    {nino:'Valentina Ruiz', fecha:'2026-05-24', padres:'Daniel y Cecilia', lugarNac:'Hospital Central'},
+  ],
+  // Grupos/equipos con su % de aceptación + servidores (para líder y pastor)
+  equipos: [
+    {nombre:'Multimedia', cumplimiento:91, pendientes:2, rechazos:1, servidores:[
+      {nombre:'Pablo Ortigoza', cumplimiento:100, completadas:23, pendientes:0, rechazos:0},
+      {nombre:'Gustavo Pisciotta', cumplimiento:97, completadas:33, pendientes:0, rechazos:1},
+      {nombre:'Daniel Ruiz', cumplimiento:82, completadas:9, pendientes:2, rechazos:0},
+    ]},
+    {nombre:'Alabanza', cumplimiento:84, pendientes:4, rechazos:2, servidores:[
+      {nombre:'Antonio Pérez', cumplimiento:88, completadas:14, pendientes:1, rechazos:1},
+      {nombre:'María Núñez', cumplimiento:80, completadas:8, pendientes:3, rechazos:1},
+    ]},
+    {nombre:'Bienvenida', cumplimiento:73, pendientes:3, rechazos:3, servidores:[
+      {nombre:'Sofía Ramírez', cumplimiento:70, completadas:5, pendientes:2, rechazos:2},
+      {nombre:'Carlos Medina', cumplimiento:76, completadas:9, pendientes:1, rechazos:1},
+    ]},
+  ],
+};
+
+// Barra inferior según rol. NO hay "Servicios" (esta app no acepta servicios).
+// Familia y Perfil ya NO van acá: pasaron arriba, junto a la campana (ver appbar).
+function tabsActuales(){
+  const inicio = {id:'inicio',ic:'home',label:'Inicio'};
+  const gestion = {id:'gestion',ic:'assignment',label:'Gestión'};
+  // Equipos con función especial (líder/pastor): ver aniversarios y los grupos etarios
+  // armados con lo que los miembros cargan en su grupo familiar (§7.7).
+  const matri = {id:'matrimonios',ic:'favorite',label:'Matrimonios'};
+  const jov   = {id:'jovenes',ic:'jovenes',label:'Jóvenes'};
+  const esc   = {id:'escuelita',ic:'escuelita',label:'Escuelita'};
+  if(ROL==='lider' || ROL==='pastor'){
+    const primero = ROL==='lider' ? {id:'equipo',ic:'dashboard',label:'Mi equipo'} : {id:'panel',ic:'dashboard',label:'Panel'};
+    const t=[inicio, primero, matri];
+    if(dashCfg('jovenes').activo)   t.push(jov);   // se ocultan si el pastor
+    if(dashCfg('escuelita').activo) t.push(esc);   // desactivó el grupo (§7.10)
+    t.push(gestion);
+    return t;
+  }
+  return [inicio]; // miembro (Familia y Perfil están arriba)
+}
+// Accesos que viven arriba (appbar), válidos para todos los roles.
+const TABS_TOP = ['familia','perfil'];
+
+let ROL='miembro', TAB='inicio', SUB=null;
+let FILTRO_HIST='todos'; // filtro del historial en el detalle de servidor
+let FILTRO_MAT='todos';  // filtro de la vista Matrimonios por tipo: todos | matrimonio | noviazgo
+let FILTRO_ASIS='todos'; // filtro de la vista Matrimonios por asistencia: todos | asisten | faltan
+let SELLOS={iglesia:'', pastor:''}; // sellos subidos para los certificados (§7.8)
+const IGLESIA='Iglesia Rajem'; // nombre de la iglesia que se estampa en los certificados (no el equipo)
+// Backend real (mismo de la App 1, AGENTS §5). El login pasa el backend elegido por ?api=
+// (más fiable que sessionStorage en file://). Por defecto, producción (Render).
+const API=(function(){
+  const q=new URLSearchParams(location.search).get('api');
+  return q ? q.replace(/\/$/,'') : 'https://nehemias-cartero.onrender.com';
+})();
+
+// Iconos de la App 1 (Material Icons como SVG inline, para igualar su temática
+// sin depender de internet; heredan el color de la barra vía currentColor).
+const ICONOS={
+  home:'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',
+  dashboard:'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
+  groups:'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
+  assignment:'M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z',
+  person:'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
+  notifications:'M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z',
+  favorite:'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
+  // Jóvenes (Material "face") y Escuelita (Material "school").
+  jovenes:'M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21.71.33 1.47.33 2.26 0 4.41-3.59 8-8 8z',
+  escuelita:'M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z'
+};
+function ic(n){ return `<svg class="mi" viewBox="0 0 24 24"><path d="${ICONOS[n]||''}"></path></svg>`; }
+
+// Notificaciones de la semana (maqueta). 'nuevo' = aún no leída (enciende el punto rojo).
+const NOTIS=[
+  {ico:'💍', txt:'Aniversario de <b>Gustavo y Ana Pisciotta</b> esta semana · 12 años', meta:'Hoy · 08:30', nuevo:true},
+  {ico:'🔥', txt:'Nuevo evento: <b>Vigilia de Jóvenes</b> · 14-06', meta:'Hoy · 09:15', nuevo:true},
+  {ico:'💧', txt:'Nuevo evento: <b>Culto de Bautismos</b> · 22-06', meta:'Lun · 18:40', nuevo:true},
+  {ico:'🎂', txt:'Cumpleaños de <b>Pablo Ortigoza</b> esta semana', meta:'Mar · 08:00', nuevo:false},
+  {ico:'🌷', txt:'Nuevo evento: <b>Reunión de Damas</b> · 28-06', meta:'Mié · 12:10', nuevo:false},
+  {ico:'📋', txt:'Recordatorio: seguimiento de nuevos miembros', meta:'Jue · 10:00', nuevo:false},
+];
+let NOTIS_ABIERTO=false;
+
+// Rol/roles recibidos desde el login (home_miembro.html?rol=lider&roles=miembro,servidor,lider).
+// Los roles son los MISMOS que en Nehemías Planificador (App 1): se comparten por backend único.
+(function(){
+  const q=new URLSearchParams(location.search);
+  const r=q.get('rol');
+  if(r==='lider'||r==='pastor'||r==='miembro'){
+    ROL=r;
+    DATA.roles = r==='miembro'?['miembro'] : r==='lider'?['miembro','servidor','lider'] : ['miembro','servidor','lider','pastor'];
+  }
+  // Si el login mandó la lista real de roles, la usamos tal cual (refleja la cuenta existente).
+  const roles=q.get('roles');
+  if(roles){ DATA.roles = roles.split(',').map(s=>s.trim()).filter(Boolean); }
+})();
+
+function setRol(r){
+  ROL=r; SUB=null;
+  DATA.roles = r==='miembro'?['miembro'] : r==='lider'?['miembro','servidor','lider'] : ['miembro','servidor','lider','pastor'];
+  if(!tabsActuales().some(t=>t.id===TAB) && !TABS_TOP.includes(TAB)) TAB='inicio';
+  render();
+}
+function irTab(id){ TAB=id; SUB=null; FILTRO_HIST='todos'; render(); }
+function setSub(o){ SUB=o; FILTRO_HIST='todos'; render(); } // entrar a un detalle resetea el filtro
+function setFiltroHist(f){ FILTRO_HIST=f; render(); }      // tocar una estadística filtra (no resetea)
+
+function inicial(n){ return (n||'?').trim()[0].toUpperCase(); }
+function colorCumpl(n){ return n>=75?'var(--verde)':n>=40?'var(--naranja)':'var(--rojo)'; }
+function colorEstado(s){ return s==='Aceptado'?'var(--verde)':s==='Rechazado'?'var(--rojo)':'var(--naranja)'; }
+function fv(f){ if(!f) return f; const p=f.split('-'); return p.length===3&&p[0].length===4?`${p[2]}-${p[1]}-${p[0]}`:f; }
+
+// ── Compartir evento (cualquier miembro) ──────────────────────────────────────
+// Comparte la IMAGEN del evento como foto + la descripción como texto, vía el menú
+// nativo del teléfono (WhatsApp, Instagram, etc.). NO comparte un link: usa la Web
+// Share API nivel 2 (files), así en redes/WhatsApp se ve como foto con pie de texto.
+// Si el evento no tiene foto subida, se genera una tarjeta cuadrada (1080×1080).
+function _coloresGrad(grad){
+  const m = (grad||'').match(/#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})/g) || [];
+  return m.length>=2 ? [m[0],m[1]] : ['#7000FF','#4DD0E1'];
+}
+function _envolverTexto(ctx,texto,x,y,maxAncho,interlineado){
+  const palabras=texto.split(' '); let linea='';
+  for(const p of palabras){
+    const prueba=linea?linea+' '+p:p;
+    if(ctx.measureText(prueba).width>maxAncho && linea){ ctx.fillText(linea,x,y); linea=p; y+=interlineado; }
+    else linea=prueba;
+  }
+  if(linea) ctx.fillText(linea,x,y);
+  return y;
+}
+// Genera (o trae) la imagen del evento como Blob para poder compartirla como archivo.
+async function _imagenEventoBlob(e){
+  if(e.imagen){ // foto real subida por Multimedia
+    try{ const r=await fetch(e.imagen); return await r.blob(); }catch(_){ /* sigue al canvas */ }
+  }
+  const S=1080, c=document.createElement('canvas'); c.width=S; c.height=S;
+  const ctx=c.getContext('2d');
+  const [c1,c2]=_coloresGrad(e.color);
+  const g=ctx.createLinearGradient(0,0,S,S); g.addColorStop(0,c1); g.addColorStop(1,c2);
+  ctx.fillStyle=g; ctx.fillRect(0,0,S,S);
+  // Velo oscuro en la mitad inferior para que el texto se lea.
+  const v=ctx.createLinearGradient(0,S*0.45,0,S); v.addColorStop(0,'rgba(13,10,21,0)'); v.addColorStop(1,'rgba(13,10,21,0.82)');
+  ctx.fillStyle=v; ctx.fillRect(0,S*0.45,S,S*0.55);
+  ctx.textAlign='center';
+  // Emoji grande
+  ctx.font='300px "Segoe UI Emoji",serif'; ctx.fillText(e.emoji||'📅', S/2, 430);
+  // Título (puede ocupar 2 líneas)
+  ctx.fillStyle='#fff'; ctx.font='bold 76px "Segoe UI",Roboto,sans-serif';
+  let y=_envolverTexto(ctx, e.titulo, S/2, 700, S-140, 92);
+  // Meta (fecha · hora · lugar)
+  ctx.fillStyle='#E0DEF0'; ctx.font='40px "Segoe UI",Roboto,sans-serif';
+  const meta=[e.fecha,e.hora?('🕒 '+e.hora):'',e.lugar?('📍 '+e.lugar):''].filter(Boolean).join('   ·   ');
+  ctx.fillText(meta, S/2, y+80);
+  // Firma de la iglesia
+  ctx.fillStyle='#9d96c4'; ctx.font='bold 34px "Segoe UI",Roboto,sans-serif';
+  ctx.fillText(IGLESIA.toUpperCase()+' · NEHEMÍAS COMUNIDAD', S/2, S-70);
+  return await new Promise(res=>c.toBlob(res,'image/png',0.92));
+}
+function _textoEvento(e){
+  const meta=[e.fecha, e.hora?('🕒 '+e.hora):'', e.lugar?('📍 '+e.lugar):''].filter(Boolean).join(' · ');
+  return `📅 *${e.titulo}*\n${meta}${e.desc?`\n\n${e.desc}`:''}\n\n— ${IGLESIA} · vía Nehemías Comunidad`;
+}
+async function compartirEvento(i){
+  const e=DATA.eventos[i]; if(!e) return;
+  const texto=_textoEvento(e);
+  try{
+    const blob=await _imagenEventoBlob(e);
+    const file=new File([blob], 'evento.png', {type:blob.type||'image/png'});
+    // Si el dispositivo puede compartir archivos, va la imagen + el texto como pie.
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], text:texto, title:e.titulo});
+      return;
+    }
+  }catch(err){ if(err && err.name==='AbortError') return; /* el usuario canceló */ }
+  // Respaldo: sin soporte de archivos, comparte el texto (o abre WhatsApp en escritorio).
+  try{
+    if(navigator.share){ await navigator.share({text:texto, title:e.titulo}); return; }
+  }catch(err){ if(err && err.name==='AbortError') return; }
+  window.open('https://wa.me/?text='+encodeURIComponent(texto), '_blank');
+}
+
+const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function porMes(lista,campo,anio){ const c=Array(12).fill(0); lista.forEach(x=>{const f=(x[campo]||'');if(f.slice(0,4)==String(anio)){const m=parseInt(f.slice(5,7))-1;if(m>=0&&m<12)c[m]++;}}); return c; }
+function barrasHtml(c){ const max=Math.max(1,...c); return `<div style="display:flex;align-items:flex-end;gap:5px;height:110px;padding-top:6px">${c.map((n,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end"><div style="font-size:10px;font-weight:bold">${n||''}</div><div style="width:70%;background:linear-gradient(to top,var(--morado),var(--cian));border-radius:4px 4px 0 0;height:${Math.round(n/max*80)}px;min-height:2px"></div><div style="font-size:8px;color:var(--texto2)">${MESES[i]}</div></div>`).join('')}</div>`; }
+
+function render(){
+  const rs=document.getElementById('rolSel'); if(rs) rs.value=ROL;
+  document.getElementById('ab_nombre').textContent = DATA.miembro.nombre;
+  document.getElementById('ab_av').textContent = inicial(DATA.miembro.nombre);
+  document.getElementById('nav').innerHTML = tabsActuales().map(t=>
+    `<button class="${t.id===TAB?'activo':''}" onclick="irTab('${t.id}')"><span class="i">${ic(t.ic)}</span>${t.label}</button>`).join('');
+  // Accesos de arriba (Familia / Perfil), con su estado activo.
+  const fb=document.getElementById('ab_familia'), pb=document.getElementById('ab_perfil');
+  fb.innerHTML=ic('groups'); pb.innerHTML=ic('person');
+  fb.classList.toggle('activo', TAB==='familia'); pb.classList.toggle('activo', TAB==='perfil');
+  const v = {inicio:vInicio, familia:vFamilia, perfil:vPerfil, equipo:vEquipo, panel:vPanel, gestion:vGestion,
+    matrimonios:vMatrimonios, jovenes:()=>vGrupoEdad('jovenes'), escuelita:()=>vGrupoEdad('escuelita')}[TAB] || vInicio;
+  document.getElementById('cont').innerHTML = v();
+  pintarCampana();
+}
+
+// ---- Campana + notificaciones de la semana ----
+function pintarCampana(){
+  const hayNuevas = NOTIS.some(n=>n.nuevo);
+  document.getElementById('ab_campana').innerHTML = ic('notifications') + (hayNuevas?'<span class="punto-rojo"></span>':'');
+}
+function toggleNotis(){ NOTIS_ABIERTO=!NOTIS_ABIERTO; if(NOTIS_ABIERTO) NOTIS.forEach(n=>n.nuevo=false); pintarNotis(); }
+function cerrarNotis(){ NOTIS_ABIERTO=false; pintarNotis(); }
+function pintarNotis(){
+  document.getElementById('notisPanel').classList.toggle('abierto',NOTIS_ABIERTO);
+  document.getElementById('notisOverlay').classList.toggle('abierto',NOTIS_ABIERTO);
+  document.getElementById('notisList').innerHTML = NOTIS.length
+    ? NOTIS.map(n=>`<div class="noti${n.nuevo?' nuevo':''}"><div class="nico">${n.ico}</div>
+        <div><div class="ntxt">${n.txt}</div><div class="nmeta">${n.meta}</div></div></div>`).join('')
+    : `<div class="notis-vacio">No hay notificaciones esta semana.</div>`;
+  pintarCampana();
+}
+
+function vInicio(){
+  return `
+    <div class="seccion-tit">Próximos eventos</div>
+    ${DATA.eventos.map((e,i)=>`
+      <div class="evento">
+        <div class="banner" style="background:${e.color}">${e.emoji}</div>
+        <div class="cuerpo">
+          <div class="titulo">${e.titulo}</div>
+          <div class="meta">📆 ${e.fecha} · 🕒 ${e.hora} · 📍 ${e.lugar}</div>
+          ${e.desc?`<div class="desc">${e.desc}</div>`:''}
+          <div class="pie">
+            <span class="badge-canal">🔔 push</span>
+            <button class="btn-compartir" onclick="compartirEvento(${i})">↗ Compartir</button>
+          </div>
+        </div>
+      </div>`).join('')}
+    <div class="seccion-tit mt">Avisos</div>
+    ${DATA.avisos.map(a=>`<div class="aviso"><span class="ico">${a.ico}</span><div><div class="txt">${a.txt}</div><div class="fecha">${a.fecha}</div></div></div>`).join('')}`;
+}
+
+function vFamilia(){
+  return `
+    <div class="seccion-tit">Mi grupo familiar</div>
+    <div id="famlist">${listaFamilia()}</div>
+    <div class="seccion-tit mt">Agregar integrante</div>
+    <label class="f">Nombre y apellido</label><input id="f_nombre" placeholder="Nombre del integrante">
+    <label class="f">Relación</label>
+    <select class="full" id="f_rel" onchange="toggleRelFam()"><option>Cónyuge</option><option>Noviazgo con propósito</option><option>Hijo/a</option><option>Otro</option></select>
+    <div id="f_anivwrap">
+      <label class="f" id="f_anivlbl">💍 Aniversario de casamiento *</label><input id="f_aniv" type="date">
+      <p style="color:#6f6a85;font-size:11px;margin-top:4px">Tenés que poner el aniversario; los <b>líderes de matrimonios</b> lo van a ver.</p>
+    </div>
+    <div id="f_edadwrap" style="display:none">
+      <label class="f">🎂 Edad del hijo/a *</label><input id="f_edad" type="number" min="0" max="120" placeholder="Años">
+      <p style="color:#6f6a85;font-size:11px;margin-top:4px">Según la edad queda clasificado/a: 🎒 <b>Escuelita</b> (4 a 12) · 🙌 <b>Jóvenes</b> (13 a 30) · 🧑 <b>Miembro</b> (31+).</p>
+    </div>
+    <button class="btn" onclick="agregarFam()">＋ Agregar</button>
+    <div class="ok" id="f_ok"></div>
+    <p style="color:#6f6a85;font-size:11px;margin-top:14px">Los hijos que cargues acá se podrán usar al registrar una <b>presentación de niños</b> y aparecen en <b>Escuelita</b> / <b>Jóvenes</b> según su edad.</p>`;
+}
+// El aniversario aplica al cónyuge y al noviazgo con propósito; la edad, a los hijos.
+// Se muestra/oculta cada campo según la relación elegida.
+function esPareja(rel){ return rel==='Cónyuge' || rel==='Noviazgo con propósito'; }
+// Clasificación por edad (§7.7): la banda a la que pertenece un hijo cargado, según los
+// rangos que define el pastor (DATA.rangosEdad, §7.10). Solo cuentan las bandas ACTIVAS;
+// por debajo de la primera activa = menor; por encima de la última = miembro. Si cae en el
+// hueco de un grupo desactivado, queda como miembro (la iglesia no tiene ese grupo).
+const ORDEN_BANDAS=['escuelita','adolescentes','jovenes'];
+function grupoEtario(edad){
+  if(edad==null||isNaN(edad)) return null;
+  const r=DATA.rangosEdad, activos=ORDEN_BANDAS.filter(k=>r[k].activo);
+  for(const k of activos){ if(edad>=r[k].min && edad<=r[k].max) return k; }
+  if(activos.length && edad < Math.min(...activos.map(k=>r[k].min))) return 'menor';
+  return 'miembro';
+}
+function etiquetaGrupo(g){ return {menor:'👶 Menor', escuelita:'🎒 Escuelita', adolescentes:'🧒 Adolescente', jovenes:'🙌 Jóvenes', miembro:'🧑 Miembro'}[g]||''; }
+const NOMBRE_GRUPO={menor:'Menor', escuelita:'Escuelita', adolescentes:'Adolescentes', jovenes:'Jóvenes', miembro:'Miembro'};
+// 🎂 Cumpleaños automático (§7.10): al cumplir años, cada integrante pasa SOLO al grupo que
+// le corresponde (Escuelita → Jóvenes → Miembro). En la maqueta se dispara con este botón;
+// en producción lo hace un cron diario que recalcula la edad desde fecha_nacimiento.
+function simularCumple(){
+  const movidos=[];
+  DATA.integrantesGF.forEach(p=>{
+    const antes=grupoEtario(p.edad); p.edad++; const dsp=grupoEtario(p.edad);
+    if(antes!==dsp) movidos.push({nombre:p.nombre, a:dsp});
+  });
+  // Mantener consistente el grupo familiar del usuario actual.
+  DATA.familia.forEach(x=>{ if(x.rel==='Hijo/a'&&x.edad!=null){ x.edad++; x.grupo=grupoEtario(x.edad); } });
+  // Avisos para los que cambiaron de grupo (encienden la campana).
+  movidos.forEach(m=> NOTIS.unshift({ico:'🎂', txt:`<b>${m.nombre}</b> cumplió años y pasó a <b>${NOMBRE_GRUPO[m.a]||m.a}</b>`, meta:'Hoy', nuevo:true}));
+  render();
+}
+function toggleRelFam(){
+  const rel=document.getElementById('f_rel').value;
+  document.getElementById('f_anivwrap').style.display = esPareja(rel) ? 'block' : 'none';
+  document.getElementById('f_edadwrap').style.display = rel==='Hijo/a' ? 'block' : 'none';
+  document.getElementById('f_anivlbl').innerHTML = rel==='Noviazgo con propósito'
+    ? '💕 Fecha en que empezaron (aniversario) *' : '💍 Aniversario de casamiento *';
+}
+function listaFamilia(){
+  return DATA.familia.map(x=>{
+    let extra='';
+    if(x.aniversario) extra=` · ${x.rel==='Noviazgo con propósito'?'💕':'💍'} ${fv(x.aniversario)}`;
+    else if(x.rel==='Hijo/a' && x.edad!=null) extra=` · ${x.edad} años · ${etiquetaGrupo(x.grupo)}`;
+    return `<div class="item"><div class="mini" style="background:var(--superficie2)">${inicial(x.nombre)}</div><div><div class="nombre">${x.nombre}</div><div class="meta">${x.rel}${extra}</div></div></div>`;
+  }).join('') || '<div class="vacio">Todavía no cargaste a tu familia.</div>';
+}
+function agregarFam(){
+  const n=document.getElementById('f_nombre').value.trim();
+  const rel=document.getElementById('f_rel').value;
+  const ok=document.getElementById('f_ok');
+  if(!n){ok.style.color='var(--rojo)';ok.textContent='⚠️ Falta el nombre.';return;}
+  const aniv=document.getElementById('f_aniv').value;
+  if(esPareja(rel) && !aniv){ ok.style.color='var(--rojo)'; ok.textContent='⚠️ Tenés que poner la fecha (aniversario).'; return; }
+  const item={rel, nombre:n};
+  if(esPareja(rel)){
+    item.aniversario=aniv;
+    if(rel==='Cónyuge') DATA.miembro.aniversario=aniv;
+    // Alimenta los aniversarios que ve el líder de matrimonios (nombre y apellido de ambos).
+    DATA.aniversarios.push({conyuge1:DATA.miembro.nombre, conyuge2:n, fecha:aniv,
+      tipo: rel==='Cónyuge'?'matrimonio':'noviazgo', asiste:true});
+  } else if(rel==='Hijo/a'){
+    const edad=parseInt(document.getElementById('f_edad').value,10);
+    if(isNaN(edad)){ ok.style.color='var(--rojo)'; ok.textContent='⚠️ Tenés que poner la edad del hijo/a.'; return; }
+    item.edad=edad; item.grupo=grupoEtario(edad);
+    // Alimenta los dashboards de Escuelita (4-12) y Jóvenes (13-30).
+    DATA.integrantesGF.push({nombre:n, edad, asiste:true, responsable:DATA.miembro.nombre});
+  }
+  DATA.familia.push(item);
+  document.getElementById('famlist').innerHTML=listaFamilia();
+  ok.style.color='var(--verde)';
+  ok.textContent = esPareja(rel) ? '✓ Agregado · el aniversario ya lo ven los líderes de matrimonios.'
+    : rel==='Hijo/a' ? `✓ Agregado · queda en ${etiquetaGrupo(item.grupo)}${['escuelita','adolescentes','jovenes'].includes(item.grupo)?' (ya aparece en el dashboard).':'.'}`
+    : '✓ Integrante agregado.';
+  document.getElementById('f_nombre').value='';
+  if(document.getElementById('f_edad')) document.getElementById('f_edad').value='';
+}
+
+function vPerfil(){
+  if(SUB && SUB.editar) return formEditarPerfil();
+  const m=DATA.miembro;
+  return `
+    <div class="seccion-tit">Mi perfil</div>
+    <div style="text-align:center;margin-bottom:16px">
+      <div class="avatar" style="width:80px;height:80px;font-size:32px;margin:0 auto 10px">${inicial(m.nombre)}</div>
+      <div style="font-weight:bold;font-size:18px">${m.nombre}</div>
+      <div>${DATA.roles.map(r=>`<span class="chip">${r}</span>`).join('')}</div>
+    </div>
+    <div class="item"><span>📧</span><div><div class="meta">Email</div><div class="nombre" style="font-size:14px">${m.email}</div></div></div>
+    <div class="item"><span>🎂</span><div><div class="meta">Cumpleaños</div><div class="nombre" style="font-size:14px">${m.cumple?fv(m.cumple):'—'}</div></div></div>
+    ${m.aniversario?`<div class="item"><span>💍</span><div><div class="meta">Aniversario de casamiento</div><div class="nombre" style="font-size:14px">${fv(m.aniversario)}</div></div></div>`:''}
+    <div class="item"><span>🏠</span><div><div class="meta">Dirección</div><div class="nombre" style="font-size:14px">${m.direccion}</div></div></div>
+    <div class="item"><span>💼</span><div><div class="meta">Ocupación</div><div class="nombre" style="font-size:14px">${m.ocupacion}</div></div></div>
+    <div class="item"><span>⛪</span><div><div class="meta">Iglesia</div><div class="nombre" style="font-size:14px">${m.iglesia}</div></div></div>
+    ${(DATA.roles.includes('lider')||DATA.roles.includes('pastor')) ? `
+      <div class="seccion-tit mt">Sellos para certificados</div>
+      <div id="sellosbox">${sellosConfigHtml()}</div>
+      <p style="color:#6f6a85;font-size:11px;margin-top:8px">Se estampan automáticamente en los certificados de bautismo y presentación (§7.8).</p>` : ''}
+    <button class="btn sec" onclick="setSub({editar:true})">✏️ Editar perfil</button>
+    <button class="btn" style="background:#2a2440" onclick="cerrarSesion()">Cerrar sesión</button>`;
+}
+// Formulario de edición del perfil (incluye el cumpleaños).
+function formEditarPerfil(){
+  const m=DATA.miembro;
+  return `<button class="volver" onclick="setSub(null)">← Perfil</button>
+    <div class="seccion-tit">Editar perfil</div>
+    <label class="f">Nombre y apellido</label><input id="e_nombre" value="${m.nombre}">
+    <label class="f">Email</label><input id="e_email" type="email" value="${m.email}">
+    <label class="f">🎂 Cumpleaños</label><input id="e_cumple" type="date" value="${m.cumple||''}">
+    <label class="f">Dirección</label><input id="e_dir" value="${m.direccion}">
+    <label class="f">Ocupación</label><input id="e_ocu" value="${m.ocupacion}">
+    <button class="btn" onclick="guardarPerfil()">Guardar cambios</button>
+    <button class="btn sec" onclick="setSub(null)">Cancelar</button>`;
+}
+// Cerrar sesión: borra la sesión real y vuelve al login (donde se elige el backend).
+function cerrarSesion(){
+  try{ sessionStorage.removeItem('neh_sesion'); }catch(e){}
+  location.href='login_miembro.html';
+}
+function guardarPerfil(){
+  const m=DATA.miembro;
+  const nombre=document.getElementById('e_nombre').value.trim();
+  if(nombre) m.nombre=nombre;
+  m.email=document.getElementById('e_email').value.trim();
+  m.cumple=document.getElementById('e_cumple').value;
+  m.direccion=document.getElementById('e_dir').value.trim();
+  m.ocupacion=document.getElementById('e_ocu').value.trim();
+  setSub(null); // vuelve al perfil ya actualizado
+}
+
+// ---- Líder: dashboard de SU equipo ----
+function vEquipo(){
+  const ei = DATA.equipos.findIndex(e=>e.nombre===DATA.miembro.equipo);
+  const idx = ei>=0?ei:0;
+  if(SUB && SUB.nivel==='servidor') return detalleServidorHtml(idx, SUB.si, ()=>setSub(null), 'Volver al equipo');
+  return `<div class="seccion-tit">Dashboard de mi equipo</div>${dashEquipoHtml(idx, (si)=>setSub({nivel:'servidor',si}))}`;
+}
+
+// ---- Pastor general: métricas como en la web ----
+function vPanel(){
+  if(SUB && SUB.config==='edades') return formRangosEdad();
+  if(SUB && SUB.nivel==='servidor') return detalleServidorHtml(SUB.ei, SUB.si, ()=>setSub({nivel:'equipo',ei:SUB.ei}), 'Volver al equipo');
+  if(SUB && SUB.nivel==='equipo'){
+    return `<button class="volver" onclick="setSub(null)">← Volver a los grupos</button>${dashEquipoHtml(SUB.ei,(si)=>setSub({nivel:'servidor',ei:SUB.ei,si}))}`;
+  }
+  // Listado de grupos/equipos con su % de aceptación
+  const prom = Math.round(DATA.equipos.reduce((a,e)=>a+e.cumplimiento,0)/DATA.equipos.length);
+  const re=DATA.rangosEdad;
+  const rstr=(k,emoji)=>`${emoji} ${re[k].activo?re[k].min+'-'+re[k].max:'<i>off</i>'}`;
+  return `
+    <div class="cab-equipo"><div class="pct">${prom}%</div><div class="l">Aceptación promedio · ${DATA.equipos.length} grupos</div></div>
+    <div class="seccion-tit">Control de equipos por edad</div>
+    <div class="item click" onclick="setSub({config:'edades'})"><div class="mini" style="background:var(--cian)">🎚️</div>
+      <div><div class="nombre">Grupos por edad</div>
+        <div class="meta">${rstr('escuelita','🎒')} · ${rstr('adolescentes','🧒')} · ${rstr('jovenes','🙌')} · solo el pastor</div></div>
+      <span class="chevron">›</span></div>
+    <div class="seccion-tit mt">Grupos / equipos</div>
+    ${DATA.equipos.map((e,i)=>`
+      <div class="item click" onclick="setSub({nivel:'equipo',ei:${i}})">
+        <div class="mini" style="background:${e.sinMetricas?'var(--superficie2)':colorCumpl(e.cumplimiento)}">${e.sinMetricas?'👥':e.cumplimiento+'%'}</div>
+        <div><div class="nombre">${e.nombre}${e.real?' <span class="chip" style="background:#43A04726;color:var(--verde)">real</span>':''}</div>
+          <div class="meta">${e.sinMetricas?`${e.servidores.length} integrantes · datos reales`:`${e.cumplimiento}% aceptación · ${e.pendientes} pend. · ${e.rechazos} rech.`}</div></div>
+        <span class="chevron">›</span>
+      </div>`).join('')}`;
+}
+
+// Control de equipos por edad (SOLO pastor, desde el Panel §7.10): por cada banda define
+// desde/hasta qué edad y si está activa (se puede desactivar la que la iglesia no tenga).
+// Adolescentes y Jóvenes (adultos) son los dos sub-grupos del dashboard de Jóvenes.
+const BANDAS_EDAD=[
+  {key:'escuelita',    emoji:'🎒', tit:'Escuelita',         sub:'Dashboard propio · sub-grupos Pequeños / Grandes'},
+  {key:'adolescentes', emoji:'🧒', tit:'Adolescentes',      sub:'Sub-grupo dentro del dashboard de Jóvenes'},
+  {key:'jovenes',      emoji:'🙌', tit:'Jóvenes (adultos)', sub:'Sub-grupo dentro del dashboard de Jóvenes'},
+];
+function formRangosEdad(){
+  const r=DATA.rangosEdad;
+  const n=g=>DATA.integrantesGF.filter(p=>grupoEtario(p.edad)===g).length;
+  const bloque=({key,emoji,tit,sub})=>{
+    const b=r[key];
+    return `<div class="item" style="display:block">
+      <label class="switch" style="margin:0"><input type="checkbox" id="re_${key}_act" ${b.activo?'checked':''}> <b>${emoji} ${tit}</b> · <span style="color:var(--texto2);font-weight:normal">${n(key)} hoy</span></label>
+      <div class="meta" style="margin:4px 0 6px">${sub}</div>
+      <div class="fila2">
+        <div><label class="f">Desde (edad)</label><input id="re_${key}_min" type="number" min="0" max="120" value="${b.min}"></div>
+        <div><label class="f">Hasta (edad)</label><input id="re_${key}_max" type="number" min="0" max="120" value="${b.max}"></div>
+      </div>
+    </div>`;
+  };
+  return `<button class="volver" onclick="setSub(null)">← Panel</button>
+    <div class="seccion-tit">Grupos por edad · control de equipos</div>
+    <p style="color:#6f6a85;font-size:11px;margin:-4px 0 12px">Solo el <b>pastor</b> define desde/hasta qué edad va cada grupo. <b>Destildá</b> un grupo para <b>desactivarlo</b> (iglesias que no lo tengan: desaparece su pestaña/sub-grupo). Al guardar, <b>todos</b> se <b>reclasifican</b>; los rangos activos <b>no pueden solaparse</b>.</p>
+    ${BANDAS_EDAD.map(bloque).join('')}
+    <p style="color:#6f6a85;font-size:11px;margin:10px 0">🧑 <b>Miembro</b>: por encima del último grupo activo (${n('miembro')} hoy). 👶 <b>Menor</b>: por debajo del primero (${n('menor')} hoy).</p>
+    <button class="btn" onclick="guardarRangosEdad()">Guardar y reclasificar</button>
+    <div class="ok" id="re_ok"></div>`;
+}
+function guardarRangosEdad(){
+  const v=id=>parseInt(document.getElementById(id).value,10);
+  const ok=document.getElementById('re_ok'); const err=t=>{ok.style.color='var(--rojo)';ok.textContent='⚠️ '+t;};
+  const nuevo={};
+  for(const {key} of BANDAS_EDAD){
+    nuevo[key]={min:v('re_'+key+'_min'), max:v('re_'+key+'_max'), activo:document.getElementById('re_'+key+'_act').checked};
+  }
+  for(const {key,tit} of BANDAS_EDAD){
+    if(isNaN(nuevo[key].min)||isNaN(nuevo[key].max)) return err('Completá las edades de '+tit+'.');
+    if(nuevo[key].min>nuevo[key].max) return err('En '+tit+', "Desde" no puede ser mayor que "Hasta".');
+  }
+  // Los grupos ACTIVOS no pueden solaparse en edades.
+  const act=BANDAS_EDAD.map(b=>b.key).filter(k=>nuevo[k].activo);
+  for(let i=0;i<act.length;i++) for(let j=i+1;j<act.length;j++){
+    const a=nuevo[act[i]], b=nuevo[act[j]];
+    if(a.min<=b.max && b.min<=a.max) return err('Los grupos activos no pueden solaparse en edades.');
+  }
+  DATA.rangosEdad=nuevo;
+  // Reclasificar a los hijos guardados en los grupos familiares con los nuevos rangos.
+  DATA.familia.forEach(x=>{ if(x.rel==='Hijo/a'&&x.edad!=null) x.grupo=grupoEtario(x.edad); });
+  setSub(null);
+}
+
+// Dashboard de un equipo (servidores). onServidor(si) navega al detalle.
+function dashEquipoHtml(ei, onServidor){
+  const e = DATA.equipos[ei];
+  window._onServ = onServidor; // para el onclick inline
+  const badge = e.real ? ' <span class="chip" style="background:#43A04726;color:var(--verde)">datos reales</span>' : '';
+  // Equipo real sin métricas (vino de get_equipo): lista de integrantes reales, sin chips.
+  if(e.real && e.sinMetricas){
+    return `
+      <div class="cab-equipo"><div class="pct" style="font-size:26px">👥 ${e.nombre}</div>
+        <div class="l">${e.servidores.length} integrantes reales</div></div>
+      <div class="seccion-tit">Integrantes del equipo${badge}</div>
+      ${e.servidores.map(s=>`
+        <div class="item"><div class="mini">${inicial(s.nombre)}</div>
+          <div><div class="nombre">${s.nombre}</div></div></div>`).join('')}
+      <p style="color:#6f6a85;font-size:11px;margin-top:10px">Integrantes reales traídos del backend (<b>get_equipo</b>). Las <b>métricas</b> de cumplimiento se ven cuando se despliegue <b>dashboard_equipo</b> (ver RESTAURAR_BACKEND.md).</p>`;
+  }
+  return `
+    <div class="cab-equipo">
+      <div class="pct">${e.cumplimiento}%</div>
+      <div class="l">Aceptación de ${e.nombre} · ${e.pendientes} pendientes · ${e.rechazos} rechazos</div>
+    </div>
+    <div class="seccion-tit">Servidores del equipo${badge}</div>
+    ${e.servidores.map((s,si)=>`
+      <div class="item click" onclick="window._onServ(${si})">
+        <div class="mini" style="background:${colorCumpl(s.cumplimiento)}">${s.cumplimiento}%</div>
+        <div><div class="nombre">${s.nombre}</div>
+          <div class="metricas">
+            <span class="mchip" style="color:var(--verde);border-color:var(--verde);background:#43A04726">✓ ${s.completadas}</span>
+            <span class="mchip" style="color:var(--naranja);border-color:var(--naranja);background:#FB8C0026">⏳ ${s.pendientes}</span>
+            ${s.rechazos?`<span class="mchip" style="color:var(--rojo);border-color:var(--rojo);background:#E5393526">✕ ${s.rechazos}</span>`:''}
+          </div></div>
+        <span class="chevron">›</span>
+      </div>`).join('')}`;
+}
+
+// Detalle de un servidor (métricas + racha + historial con motivos + ausencias).
+function detalleServidorHtml(ei, si, volverFn, volverTxt){
+  const e=DATA.equipos[ei], s=e.servidores[si], d=detalleDe(s);
+  window._volver = volverFn;
+  // Tile tocable: si recibe `filtro`, filtra el historial por ese estado.
+  const tile=(v,l,c,filtro)=>{
+    const activo = filtro && FILTRO_HIST===filtro;
+    const click = filtro?`onclick="setFiltroHist('${filtro}')"`:'';
+    const estilo = activo?`border:2px solid ${c};background:${c}2e;`:'';
+    const cursor = filtro?'cursor:pointer;':'';
+    return `<div class="tile" ${click} style="${cursor}${estilo}"><div class="n" style="color:${c}">${v}</div><div class="l">${l}</div></div>`;
+  };
+  const ETQ={Pendiente:'Pendientes',Aceptado:'Completados',Rechazado:'Rechazados'};
+  const histF = FILTRO_HIST==='todos' ? d.hist : d.hist.filter(h=>h.status===FILTRO_HIST);
+  const hist = histF.length ? histF.map(h=>`
+    <div class="item"><span class="punto" style="background:${colorEstado(h.status)};margin-top:4px"></span>
+      <div><div class="nombre" style="font-size:14px">${h.nombre}</div>
+        <div class="meta">${h.fecha} · ${h.area}</div>
+        ${h.status==='Rechazado'&&h.motivo?`<div class="meta" style="color:var(--rojo)">Motivo: ${h.motivo}</div>`:''}</div>
+      <span class="mchip" style="margin-left:auto;color:${colorEstado(h.status)};border-color:${colorEstado(h.status)};background:${colorEstado(h.status)}26">${h.status}</span>
+    </div>`).join('') : `<div class="vacio">${FILTRO_HIST==='todos'?'Sin cultos en el historial.':'No hay cultos "'+(ETQ[FILTRO_HIST]||FILTRO_HIST)+'".'}</div>`;
+  const aus = d.ausencias.length ? d.ausencias.map(a=>`
+    <div class="item"><span class="punto" style="background:var(--naranja)"></span>
+      <div><div class="nombre" style="font-size:14px">${a.motivo}</div><div class="meta">${a.fi} → ${a.ff}</div></div></div>`).join('') : '<div class="vacio">Sin ausencias registradas.</div>';
+  return `
+    <button class="volver" onclick="window._volver()">← ${volverTxt}</button>
+    <div style="text-align:center;margin-bottom:14px">
+      <div class="avatar" style="width:64px;height:64px;font-size:24px;margin:0 auto 8px">${inicial(s.nombre)}</div>
+      <div style="font-weight:bold;font-size:17px">${s.nombre}</div>
+      <div class="meta" style="color:var(--texto2);font-size:12px">Equipo ${e.nombre}</div>
+    </div>
+    <div class="tiles">
+      ${tile(s.cumplimiento+'%','Cumplimiento',colorCumpl(s.cumplimiento),'todos')}
+      ${tile('🔥 '+d.racha,'Racha','var(--cian)')}
+      ${tile(s.completadas,'Completadas','var(--verde)','Aceptado')}
+      ${tile(s.pendientes,'Pendientes','var(--naranja)','Pendiente')}
+      ${tile(s.rechazos,'Rechazos','var(--rojo)','Rechazado')}
+    </div>
+    <div class="seccion-tit">Historial de cultos <span style="text-transform:none;letter-spacing:0;font-weight:normal;color:var(--texto2);font-size:11px">${FILTRO_HIST==='todos'?'· tocá una estadística':'· '+(ETQ[FILTRO_HIST]||FILTRO_HIST)}</span></div>${hist}
+    <div class="seccion-tit mt">Ausencias</div>${aus}`;
+}
+
+// ---- Equipo de Matrimonios (líder/pastor): aniversarios de las parejas ----
+// Días que faltan para el próximo aniversario y años que cumplirán ese día.
+function proxAniv(iso){
+  const f=new Date(iso+'T00:00:00'); const hoy=new Date(); hoy.setHours(0,0,0,0);
+  let prox=new Date(hoy.getFullYear(), f.getMonth(), f.getDate());
+  if(prox<hoy) prox=new Date(hoy.getFullYear()+1, f.getMonth(), f.getDate());
+  return {dias:Math.round((prox-hoy)/86400000), anios:prox.getFullYear()-f.getFullYear()};
+}
+// Filtros tocables: si vuelvo a tocar el filtro activo, se desactiva (vuelve a 'todos').
+function setFiltroMat(f){ FILTRO_MAT=(f===FILTRO_MAT&&f!=='todos')?'todos':f; render(); }
+function setFiltroAsis(f){ FILTRO_ASIS=(f===FILTRO_ASIS&&f!=='todos')?'todos':f; render(); }
+function toggleAsistencia(i){ DATA.aniversarios[i].asiste=!DATA.aniversarios[i].asiste; render(); }
+// Apariencia según el tipo de pareja.
+function tipoMat(t){ return t==='noviazgo'
+  ? {label:'Noviazgo con propósito', ico:'💕', grad:'linear-gradient(135deg,#FF80AB,#7000FF)', chip:'background:#FF80AB26;color:#ff9ec2'}
+  : {label:'Matrimonio', ico:'💍', grad:'linear-gradient(135deg,#E91E63,#7000FF)', chip:'background:#E91E6326;color:#ff7aa8'}; }
+
+// ---- Dashboards por grupo etario: Escuelita y Jóvenes ----
+// Se arman con los integrantes que los miembros cargan en su grupo familiar (§7.7).
+// Mismo patrón que Matrimonios: métricas + filtros tocables (sub-grupo de edad + asistencia).
+const GRUPOS_EDAD = {
+  jovenes:   {titulo:'Jóvenes',   emoji:'🙌', sustantivo:'jóvenes', reunion:'las reuniones de jóvenes', grad:'linear-gradient(135deg,#FB8C00,#7000FF)'},
+  escuelita: {titulo:'Escuelita', emoji:'🎒', sustantivo:'niños',   reunion:'la escuelita',             grad:'linear-gradient(135deg,#43A047,#4DD0E1)'},
+};
+// Config viva de cada dashboard según las bandas que define el pastor (§7.10):
+// - Escuelita = banda 'escuelita', partida en Pequeños/Grandes por un corte fijo (8).
+// - Jóvenes   = bandas 'adolescentes' + 'jovenes' (las activas), cada una un sub-grupo.
+// Devuelve {activo, min, max, pert:[bandas que pertenecen], subs:[{key,label,rango,test,color}]}.
+function dashCfg(g){
+  const r=DATA.rangosEdad;
+  if(g==='escuelita'){
+    const b=r.escuelita, corte=Math.min(Math.max(8,b.min+1),b.max);
+    return {activo:b.activo, min:b.min, max:b.max, pert:['escuelita'], subs:[
+      {key:'peq', label:'Pequeños', rango:`${b.min} a ${corte-1}`, test:e=>e>=b.min&&e<=corte-1, color:'#80deea'},
+      {key:'gra', label:'Grandes',  rango:`${corte} a ${b.max}`,   test:e=>e>=corte&&e<=b.max,   color:'#4db6ac'},
+    ]};
+  }
+  const defs=[
+    {key:'ado', label:'Adolescentes',    band:r.adolescentes, color:'#ffb74d'},
+    {key:'adu', label:'Jóvenes adultos', band:r.jovenes,      color:'#ff9e6d'},
+  ].filter(d=>d.band.activo);
+  const mins=defs.map(d=>d.band.min), maxs=defs.map(d=>d.band.max);
+  return {
+    activo:defs.length>0,
+    min:mins.length?Math.min(...mins):0, max:maxs.length?Math.max(...maxs):0,
+    pert:['adolescentes','jovenes'],
+    subs:defs.map(d=>({key:d.key, label:d.label, rango:`${d.band.min} a ${d.band.max}`, test:e=>e>=d.band.min&&e<=d.band.max, color:d.color})),
+  };
+}
+// Filtros por dashboard: sub (sub-grupo de edad) + asis (asistencia). Toggle como Matrimonios.
+let FILTROS_GE = { jovenes:{sub:'todos',asis:'todos'}, escuelita:{sub:'todos',asis:'todos'} };
+function setFiltroGE(g,dim,val){ const f=FILTROS_GE[g]; f[dim]=(f[dim]===val&&val!=='todos')?'todos':val; render(); }
+function toggleAsisGE(idx){ DATA.integrantesGF[idx].asiste=!DATA.integrantesGF[idx].asiste; render(); }
+
+function vGrupoEdad(g){
+  if(SUB && SUB.addLider) return formLider(g);
+  if(SUB && SUB.lider)    return vLiderazgo(g);
+  const cfg=GRUPOS_EDAD[g], f=FILTROS_GE[g], dc=dashCfg(g), subs=dc.subs;
+  const cuenta=arr=>({total:arr.length, asisten:arr.filter(p=>p.asiste).length, faltan:arr.filter(p=>!p.asiste).length});
+  // Integrantes que pertenecen a este dashboard (por su banda), con índice global.
+  const base=DATA.integrantesGF.map((p,i)=>({...p,_i:i})).filter(p=>dc.pert.includes(grupoEtario(p.edad)));
+  const cAll=cuenta(base);
+  const lista=base
+    .filter(p=>{ if(f.sub==='todos') return true; const s=subs.find(s=>s.key===f.sub); return s?s.test(p.edad):false; })
+    .filter(p=> f.asis==='todos' ? true : f.asis==='asisten' ? p.asiste : !p.asiste)
+    .sort((a,b)=>a.edad-b.edad);
+  const tA=k=>f.asis===k?'act':'', tS=k=>f.sub===k?'act':'';
+  const fchip=(val,txt)=>`<button class="fbtn ${f.sub===val?'activo':''}" onclick="setFiltroGE('${g}','sub','${val}')">${txt}</button>`;
+  // Tiles y chips de sub-grupos (dinámicos: 1 o 2 según las bandas activas).
+  const subTiles=subs.map(s=>{const c=cuenta(base.filter(p=>s.test(p.edad)));
+    return `<div class="tile click ${tS(s.key)}" onclick="setFiltroGE('${g}','sub','${s.key}')"><div class="n" style="color:${s.color}">${c.total}</div><div class="l">${s.label}<br>${s.rango}</div></div>`;}).join('');
+  const subChips=subs.map(s=>fchip(s.key,s.label)).join('');
+  return `
+    <div class="cab-equipo" style="background:${cfg.grad}">
+      <div class="pct" style="font-size:26px">${cfg.emoji} ${cfg.titulo}</div>
+      <div class="l">${cAll.total} ${cfg.sustantivo} · ${cAll.asisten} asisten · ${cAll.faltan} no asisten</div>
+    </div>
+    <div class="item click" onclick="setSub({lider:true})"><div class="mini">👥</div>
+      <div><div class="nombre">Liderazgo del equipo</div>
+        <div class="meta">${DATA.liderazgo[g].length} en el liderazgo · gestionar líderes, co-líderes y colaboradores</div></div>
+      <span class="chevron">›</span></div>
+    <p style="color:#6f6a85;font-size:11px;margin:6px 0 10px">Se arma con lo que cada miembro carga en su <b>grupo familiar</b> (§7.7): los hijos de <b>${dc.min} a ${dc.max} años</b> entran a ${cfg.titulo}. <b>El pastor</b> define los rangos${g==='jovenes'?' (Adolescentes / Jóvenes adultos)':''} desde el <b>Panel</b> (§7.10). Tocá una estadística para filtrar.</p>
+    <button class="btn sec" style="margin:0 0 12px" onclick="simularCumple()">🎂 Simular cumpleaños (+1 año) · demo del pase automático</button>
+
+    <div class="seccion-tit">Asistencia a ${cfg.reunion} <span style="text-transform:none;letter-spacing:0;font-weight:normal;color:var(--texto2);font-size:11px">· tocá una estadística para filtrar</span></div>
+    <div class="tiles">
+      <div class="tile click ${tA('asisten')}" onclick="setFiltroGE('${g}','asis','asisten')"><div class="n" style="color:var(--verde)">${cAll.asisten}</div><div class="l">Asisten</div></div>
+      <div class="tile click ${tA('faltan')}" onclick="setFiltroGE('${g}','asis','faltan')"><div class="n" style="color:var(--rojo)">${cAll.faltan}</div><div class="l">No asisten</div></div>
+      ${subTiles}
+    </div>
+
+    <div class="seccion-tit">Integrantes <span style="text-transform:none;letter-spacing:0;font-weight:normal;color:var(--texto2);font-size:11px">· tocá Asiste/No asiste para marcar</span></div>
+    <div class="filtros">${fchip('todos','Todos')}${subChips}${f.asis!=='todos'?`<button class="fbtn activo" onclick="setFiltroGE('${g}','asis','todos')">${f.asis==='asisten'?'✓ Asisten':'✗ No asisten'} ✕</button>`:''}</div>
+    ${lista.map(p=>`
+      <div class="item"><div class="mini" style="background:${cfg.grad}">${inicial(p.nombre)}</div>
+        <div style="flex:1"><div class="nombre">${p.nombre}</div>
+          <div class="meta">${p.edad} años · ${etiquetaGrupo(grupoEtario(p.edad))} · flia. de ${p.responsable}</div></div>
+        <button class="asis ${p.asiste?'si':'no'}" onclick="toggleAsisGE(${p._i})">${p.asiste?'✓ Asiste':'✗ No asiste'}</button>
+      </div>`).join('') || '<div class="vacio">No hay integrantes en este filtro.</div>'}`;
+}
+
+function vMatrimonios(){
+  if(SUB && SUB.addLider) return formLider('matrimonios');
+  if(SUB && SUB.lider)    return vLiderazgo('matrimonios');
+  const cuenta=arr=>({total:arr.length, asisten:arr.filter(a=>a.asiste).length, faltan:arr.filter(a=>!a.asiste).length});
+  const cAll=cuenta(DATA.aniversarios);
+  const cMat=cuenta(DATA.aniversarios.filter(a=>a.tipo!=='noviazgo'));
+  const cNov=cuenta(DATA.aniversarios.filter(a=>a.tipo==='noviazgo'));
+  const lista=DATA.aniversarios.map((a,i)=>({...a,_i:i, ...proxAniv(a.fecha)}))
+    .filter(a=> FILTRO_MAT==='todos' ? true : FILTRO_MAT==='noviazgo' ? a.tipo==='noviazgo' : a.tipo!=='noviazgo')
+    .filter(a=> FILTRO_ASIS==='todos' ? true : FILTRO_ASIS==='asisten' ? a.asiste : !a.asiste)
+    .sort((x,y)=>x.dias-y.dias);
+  const fchip=(f,txt)=>`<button class="fbtn ${FILTRO_MAT===f?'activo':''}" onclick="setFiltroMat('${f}')">${txt}</button>`;
+  // Estado de los tiles tocables (resaltado del que está filtrando).
+  const tAsis=f=>FILTRO_ASIS===f?'act':'', tMat=f=>FILTRO_MAT===f?'act':'';
+  return `
+    <div class="cab-equipo" style="background:linear-gradient(135deg,#E91E63,#7000FF)">
+      <div class="pct" style="font-size:26px">💍 Matrimonios</div>
+      <div class="l">${cAll.total} parejas · ${cAll.asisten} asisten · ${cAll.faltan} no asisten</div>
+    </div>
+    <div class="item click" onclick="setSub({lider:true})"><div class="mini">👥</div>
+      <div><div class="nombre">Liderazgo del equipo</div>
+        <div class="meta">${DATA.liderazgo.matrimonios.length} en el liderazgo · gestionar líderes, co-líderes y colaboradores</div></div>
+      <span class="chevron">›</span></div>
+    <p style="color:#6f6a85;font-size:11px;margin:6px 0 12px">Visible solo para <b>líderes de matrimonios</b>, el <b>equipo de matrimonios</b> y <b>pastores</b>. Ves quiénes son matrimonios y quiénes noviazgos con propósito, sus aniversarios y su asistencia a las reuniones.</p>
+
+    <div class="seccion-tit">Asistencia a las reuniones <span style="text-transform:none;letter-spacing:0;font-weight:normal;color:var(--texto2);font-size:11px">· tocá una estadística para filtrar</span></div>
+    <div class="tiles">
+      <div class="tile click ${tAsis('asisten')}" onclick="setFiltroAsis('asisten')"><div class="n" style="color:var(--verde)">${cAll.asisten}</div><div class="l">Asisten</div></div>
+      <div class="tile click ${tAsis('faltan')}" onclick="setFiltroAsis('faltan')"><div class="n" style="color:var(--rojo)">${cAll.faltan}</div><div class="l">No asisten</div></div>
+      <div class="tile click ${tMat('matrimonio')}" onclick="setFiltroMat('matrimonio')"><div class="n" style="color:#ff7aa8">${cMat.asisten}/${cMat.total}</div><div class="l">Matrimonios</div></div>
+      <div class="tile click ${tMat('noviazgo')}" onclick="setFiltroMat('noviazgo')"><div class="n" style="color:#ff9ec2">${cNov.asisten}/${cNov.total}</div><div class="l">Noviazgos</div></div>
+    </div>
+
+    <div class="seccion-tit">Parejas <span style="text-transform:none;letter-spacing:0;font-weight:normal;color:var(--texto2);font-size:11px">· tocá Asiste/No asiste para marcar</span></div>
+    <div class="filtros">${fchip('todos','Todos')}${fchip('matrimonio','Matrimonios')}${fchip('noviazgo','Noviazgos con propósito')}${FILTRO_ASIS!=='todos'?`<button class="fbtn activo" onclick="setFiltroAsis('todos')">${FILTRO_ASIS==='asisten'?'✓ Asisten':'✗ No asisten'} ✕</button>`:''}</div>
+    ${lista.map(a=>{const t=tipoMat(a.tipo);return `
+      <div class="item"><div class="mini" style="background:${t.grad}">${t.ico}</div>
+        <div style="flex:1"><div class="nombre">${a.conyuge1} y ${a.conyuge2}</div>
+          <div style="margin:3px 0"><span class="chip" style="${t.chip}">${t.label}</span></div>
+          <div class="meta">${fv(a.fecha)} · ${a.anios} año${a.anios===1?'':'s'}${a.dias===0?' · 🎉 ¡hoy!':a.dias<=7?` · en ${a.dias}d`:''}</div></div>
+        <button class="asis ${a.asiste?'si':'no'}" onclick="toggleAsistencia(${a._i})">${a.asiste?'✓ Asiste':'✗ No asiste'}</button>
+      </div>`;}).join('') || '<div class="vacio">No hay parejas en este filtro.</div>'}`;
+}
+// Pantalla aparte: gestión del liderazgo de un equipo (líderes, co-líderes, colaboradores).
+// Genérica para Matrimonios (§7.9), Jóvenes y Escuelita (§7.10).
+const ROLES_EQ=['Líder','Co-líder','Colaborador'];
+const PLURAL_EQ={'Líder':'Líderes','Co-líder':'Co-líderes','Colaborador':'Colaboradores'};
+const TIT_EQ={matrimonios:'Matrimonios', jovenes:'Jóvenes', escuelita:'Escuelita'};
+const VE_EQ={matrimonios:'los aniversarios', jovenes:'a los jóvenes', escuelita:'la escuelita'};
+function cambiarRolLider(g,i,rol){ DATA.liderazgo[g][i].rol=rol; render(); }
+function togglePermLider(g,i){ DATA.liderazgo[g][i].vePuede=!DATA.liderazgo[g][i].vePuede; render(); }
+function quitarLider(g,i){ DATA.liderazgo[g].splice(i,1); render(); }
+function vLiderazgo(g){
+  const items=DATA.liderazgo[g].map((l,i)=>({...l,_i:i}));
+  const grupos=ROLES_EQ.map(r=>{
+    const gg=items.filter(l=>l.rol===r);
+    if(!gg.length) return '';
+    return `<div class="seccion-tit mt">${PLURAL_EQ[r]} (${gg.length})</div>
+      ${gg.map(l=>`<div class="item" style="align-items:flex-start"><div class="mini">${inicial(l.nombre)}</div>
+        <div style="flex:1"><div class="nombre">${l.nombre}</div>
+          <label class="switch" style="margin-top:6px;font-size:11px"><input type="checkbox" ${l.vePuede?'checked':''} onchange="togglePermLider('${g}',${l._i})"> 👁️ ve ${VE_EQ[g]}</label>
+          <select class="full" style="margin-top:7px" onchange="cambiarRolLider('${g}',${l._i},this.value)">${ROLES_EQ.map(o=>`<option ${o===l.rol?'selected':''}>${o}</option>`).join('')}</select>
+        </div>
+        <button class="volver" style="margin:0 0 0 6px" onclick="quitarLider('${g}',${l._i})">Quitar</button>
+      </div>`).join('')}`;
+  }).join('');
+  return `<button class="volver" onclick="setSub(null)">← ${TIT_EQ[g]}</button>
+    <div class="seccion-tit">Liderazgo del equipo de ${TIT_EQ[g]}</div>
+    <p style="color:#6f6a85;font-size:11px;margin:-4px 0 10px">Gestioná quiénes son <b>líderes</b>, <b>co-líderes</b> y <b>colaboradores</b>. Quienes tengan permiso <b>ven ${VE_EQ[g]}</b>.</p>
+    <button class="btn" style="margin-top:0" onclick="setSub({addLider:true})">＋ Sumar al liderazgo</button>
+    ${grupos || '<div class="vacio">Todavía no hay nadie en el liderazgo.</div>'}`;
+}
+// Form para sumar un servidor/miembro al liderazgo de un equipo.
+function formLider(g){
+  const yaEstan = DATA.liderazgo[g].map(l=>l.nombre);
+  const cand = DATA.directorio.filter(m=>!yaEstan.includes(m.nombre));
+  return `<button class="volver" onclick="setSub({lider:true})">← Liderazgo</button>
+    <div class="seccion-tit">Sumar al liderazgo de ${TIT_EQ[g]}</div>
+    ${cand.length ? `
+      <label class="f">Servidor / miembro</label>
+      <select class="full" id="lm_persona">${cand.map(m=>`<option>${m.nombre}</option>`).join('')}</select>
+      <label class="f">Rol en el equipo</label>
+      <select class="full" id="lm_rol"><option>Colaborador</option><option>Co-líder</option><option>Líder</option></select>
+      <label class="switch"><input type="checkbox" id="lm_perm" checked> Permiso para ver ${VE_EQ[g]}</label>
+      <button class="btn" onclick="guardarLider('${g}')">Agregar al liderazgo</button>
+      <div class="ok" id="lm_ok"></div>`
+    : '<div class="vacio">Ya están todos los miembros del directorio en el liderazgo.</div>'}`;
+}
+function guardarLider(g){
+  const sel=document.getElementById('lm_persona');
+  if(!sel||!sel.value){ document.getElementById('lm_ok').textContent='⚠️ No hay a quién agregar.'; return; }
+  DATA.liderazgo[g].push({nombre:sel.value, rol:document.getElementById('lm_rol').value, vePuede:document.getElementById('lm_perm').checked});
+  setSub({lider:true}); // vuelve a la pantalla de liderazgo
+}
+
+// ---- Gestión (líder y pastor): miembros, bautismos, presentaciones ----
+function vGestion(){
+  if(SUB && SUB.g==='miembros') return SUB.alta ? formMiembro() : gMiembros();
+  if(SUB && SUB.g==='bautismos') return SUB.cert ? certBautismo(SUB.cert) : (SUB.alta ? formBautismo() : gBautismos());
+  if(SUB && SUB.g==='presentaciones') return SUB.cert ? certPresentacion(SUB.cert) : (SUB.alta ? formPresentacion() : gPresentaciones());
+  const baut = DATA.bautismos.filter(b=>b.fecha.startsWith('2026')).length;
+  const pres = DATA.presentaciones.filter(p=>p.fecha.startsWith('2026')).length;
+  return `
+    <div class="seccion-tit">Gestión de la congregación</div>
+    <div class="item click" onclick="setSub({g:'miembros'})"><div class="mini">👥</div>
+      <div><div class="nombre">Miembros</div><div class="meta">${DATA.directorio.length} registrados</div></div><span class="chevron">›</span></div>
+    <div class="item click" onclick="setSub({g:'bautismos'})"><div class="mini" style="background:var(--cian)">💧</div>
+      <div><div class="nombre">Bautismos</div><div class="meta">${baut} en 2026</div></div><span class="chevron">›</span></div>
+    <div class="item click" onclick="setSub({g:'presentaciones'})"><div class="mini" style="background:var(--naranja)">🍼</div>
+      <div><div class="nombre">Presentaciones de niños</div><div class="meta">${pres} en 2026</div></div><span class="chevron">›</span></div>`;
+}
+function gMiembros(){
+  return `<button class="volver" onclick="setSub(null)">← Gestión</button>
+    <div class="seccion-tit">Miembros (${DATA.directorio.length})</div>
+    <button class="btn" style="margin-top:0;margin-bottom:12px" onclick="setSub({g:'miembros',alta:true})">＋ Nuevo miembro</button>
+    ${DATA.directorio.map(m=>`
+      <div class="item"><div class="mini">${inicial(m.nombre)}</div>
+        <div><div class="nombre">${m.nombre} ${m.nuevo?'<span class="chip" style="background:#43A04726;color:var(--verde)">✨ Nuevo</span>':''}</div>
+          <div class="meta">Equipo: ${m.equipo} · ${m.tel}</div>
+          <div style="margin-top:3px">${m.roles.map(r=>`<span class="chip">${r}</span>`).join('')}</div></div></div>`).join('')}`;
+}
+function gBautismos(){
+  const total = DATA.bautismos.filter(b=>b.fecha.startsWith('2026')).length;
+  return `<button class="volver" onclick="setSub(null)">← Gestión</button>
+    <div class="seccion-tit">Bautismos 2026 · total ${total}</div>
+    <button class="btn" style="margin-top:0;margin-bottom:14px" onclick="setSub({g:'bautismos',alta:true})">＋ Registrar bautismo</button>
+    ${barrasHtml(porMes(DATA.bautismos,'fecha',2026))}
+    <div class="seccion-tit mt">Listado</div>
+    ${DATA.bautismos.map((b,i)=>`<div class="item click" onclick="setSub({g:'bautismos',cert:DATA.bautismos[${i}]})"><div class="mini" style="background:var(--cian)">💧</div>
+      <div><div class="nombre">${b.miembro}</div><div class="meta">${fv(b.fecha)} · ${b.lugar}</div></div><span class="chevron">📄</span></div>`).join('')}`;
+}
+function gPresentaciones(){
+  const total = DATA.presentaciones.filter(p=>p.fecha.startsWith('2026')).length;
+  return `<button class="volver" onclick="setSub(null)">← Gestión</button>
+    <div class="seccion-tit">Presentaciones 2026 · total ${total}</div>
+    <button class="btn" style="margin-top:0;margin-bottom:14px" onclick="setSub({g:'presentaciones',alta:true})">＋ Registrar presentación</button>
+    ${barrasHtml(porMes(DATA.presentaciones,'fecha',2026))}
+    <div class="seccion-tit mt">Listado</div>
+    ${DATA.presentaciones.map((p,i)=>`<div class="item click" onclick="setSub({g:'presentaciones',cert:DATA.presentaciones[${i}]})"><div class="mini" style="background:var(--naranja)">🍼</div>
+      <div><div class="nombre">${p.nino}</div><div class="meta">Presentado ${fv(p.fecha)} · nac. en ${p.lugarNac} · ${p.padres}</div></div><span class="chevron">📄</span></div>`).join('')}`;
+}
+
+// ---- Altas de Gestión (formularios) ----
+const ROLES_DISP = ['miembro','servidor','lider','pastor_ministerial','pastor'];
+const EQUIPOS_OPC = () => DATA.equipos.map(e=>e.nombre).concat('EQ Ministerial');
+
+// Alta de miembro (líder/pastor): datos + roles asignables + marca de nuevo miembro.
+function formMiembro(){
+  return `<button class="volver" onclick="setSub({g:'miembros'})">← Miembros</button>
+    <div class="seccion-tit">Registrar miembro</div>
+    <label class="f">Nombre y apellido *</label><input id="nm_nombre" placeholder="Nombre completo">
+    <div class="fila2">
+      <div><label class="f">Teléfono</label><input id="nm_tel" placeholder="Opcional"></div>
+      <div><label class="f">Equipo</label>
+        <select class="full" id="nm_equipo"><option value="—">Sin equipo</option>${EQUIPOS_OPC().map(e=>`<option>${e}</option>`).join('')}</select></div>
+    </div>
+    <label class="f">Correo electrónico</label><input id="nm_email" placeholder="correo@iglesia.com">
+    <label class="f">Dirección</label><input id="nm_dir" placeholder="Opcional">
+    <label class="f">Ocupación</label><input id="nm_ocup" placeholder="De qué trabaja (opcional)">
+    <label class="f">Roles</label>
+    <div class="rolesbox">${ROLES_DISP.map(r=>`<label><input type="checkbox" value="${r}" ${r==='miembro'?'checked disabled':''}> ${r}</label>`).join('')}</div>
+    <label class="switch"><input type="checkbox" id="nm_nuevo" checked> ✨ Marcar como nuevo miembro (seguimiento 1 mes)</label>
+    <button class="btn" onclick="guardarMiembro()">Guardar miembro</button>
+    <div class="ok" id="nm_ok"></div>
+    <p style="color:#6f6a85;font-size:11px;margin-top:12px">Al registrar un nuevo miembro se avisa por push <b>solo al equipo de Consolidación</b> (SUITE §7.4).</p>`;
+}
+function guardarMiembro(){
+  const nombre=document.getElementById('nm_nombre').value.trim();
+  if(!nombre){ document.getElementById('nm_ok').textContent='⚠️ Falta el nombre.'; return; }
+  const roles=[...document.querySelectorAll('.rolesbox input:checked')].map(c=>c.value);
+  if(!roles.includes('miembro')) roles.unshift('miembro');
+  DATA.directorio.unshift({
+    nombre, roles, equipo:document.getElementById('nm_equipo').value,
+    tel:document.getElementById('nm_tel').value.trim()||'No',
+    nuevo:document.getElementById('nm_nuevo').checked
+  });
+  setSub({g:'miembros'});
+}
+
+// Alta de bautismo.
+function formBautismo(){
+  return `<button class="volver" onclick="setSub({g:'bautismos'})">← Bautismos</button>
+    <div class="seccion-tit">Registrar bautismo</div>
+    <label class="f">Miembro *</label>
+    <select class="full" id="bz_miembro">${DATA.directorio.map(m=>`<option>${m.nombre}</option>`).join('')}</select>
+    <div class="fila2">
+      <div><label class="f">Fecha *</label><input id="bz_fecha" type="date"></div>
+      <div><label class="f">Lugar</label><input id="bz_lugar" placeholder="Templo / río..."></div>
+    </div>
+    <label class="f">Oficiante</label><input id="bz_ofi" placeholder="Pastor que bautiza (opcional)">
+    <button class="btn" onclick="guardarBautismo()">Guardar y generar certificado</button>
+    <div class="ok" id="bz_ok"></div>`;
+}
+function guardarBautismo(){
+  const fecha=document.getElementById('bz_fecha').value;
+  if(!fecha){ document.getElementById('bz_ok').textContent='⚠️ Falta la fecha.'; return; }
+  const reg={
+    miembro:document.getElementById('bz_miembro').value,
+    fecha, lugar:document.getElementById('bz_lugar').value.trim()||'Templo central',
+    oficiante:document.getElementById('bz_ofi').value.trim()||''
+  };
+  DATA.bautismos.push(reg);
+  setSub({g:'bautismos', cert:reg}); // muestra el certificado generado
+}
+
+// Alta de presentación de niño (se vincula al grupo familiar, SUITE §7.6/§7.7).
+function formPresentacion(){
+  return `<button class="volver" onclick="setSub({g:'presentaciones'})">← Presentaciones</button>
+    <div class="seccion-tit">Registrar presentación</div>
+    <label class="f">Nombre del niño/a *</label><input id="pr_nino" placeholder="Nombre y apellido">
+    <label class="f">Sexo</label>
+    <select class="full" id="pr_sexo">
+      <option value="varon">Varón 💙 (certificado celeste)</option>
+      <option value="nena">Nena 💗 (certificado rosa)</option>
+    </select>
+    <div class="fila2">
+      <div><label class="f">Nacimiento</label><input id="pr_nac" type="date"></div>
+      <div><label class="f">Presentación *</label><input id="pr_fecha" type="date"></div>
+    </div>
+    <label class="f">Ciudad de nacimiento</label><input id="pr_lugarnac" placeholder="Ej: José C. Paz">
+    <label class="f">Lugar de presentación</label><input id="pr_lugarpres" placeholder="Templo / iglesia">
+    <label class="f">Padres</label><input id="pr_padres" placeholder="Ej: Gustavo y Ana">
+    <label class="f">Testigos</label><input id="pr_testigos" placeholder="Ej: Juan y María (opcional)">
+    <label class="f">Presentado por</label><input id="pr_ofi" placeholder="Ej: Pablo Naigles">
+    <button class="btn" onclick="guardarPresentacion()">Guardar y generar certificado</button>
+    <div class="ok" id="pr_ok"></div>
+    <p style="color:#6f6a85;font-size:11px;margin-top:12px">Al guardar se arma el <b>certificado</b> automáticamente (SUITE §7.8). Los hijos cargados en "Familia" se podrán elegir acá.</p>`;
+}
+function guardarPresentacion(){
+  const nino=document.getElementById('pr_nino').value.trim();
+  const fecha=document.getElementById('pr_fecha').value;
+  if(!nino||!fecha){ document.getElementById('pr_ok').textContent='⚠️ Falta el nombre o la fecha de presentación.'; return; }
+  const reg={
+    nino, fecha,
+    sexo:document.getElementById('pr_sexo').value,
+    fechaNac:document.getElementById('pr_nac').value,
+    lugarNac:document.getElementById('pr_lugarnac').value.trim()||'—',
+    lugarPres:document.getElementById('pr_lugarpres').value.trim()||IGLESIA,
+    padres:document.getElementById('pr_padres').value.trim()||'—',
+    testigos:document.getElementById('pr_testigos').value.trim()||'',
+    oficiante:document.getElementById('pr_ofi').value.trim()||''
+  };
+  DATA.presentaciones.push(reg);
+  setSub({g:'presentaciones', cert:reg}); // muestra el certificado generado
+}
+
+// ---- Sellos personalizados (se suben en Perfil, líder/pastor) ----
+function sellosConfigHtml(){
+  const item=(tipo,label)=> SELLOS[tipo]
+    ? `<div class="item"><img src="${SELLOS[tipo]}" style="width:46px;height:46px;border-radius:8px;object-fit:contain;background:#fff;flex:0 0 auto"><div><div class="nombre" style="font-size:14px">${label}</div><div class="meta">✓ Cargado</div></div><button class="volver" style="margin:0 0 0 auto" onclick="quitarSello('${tipo}')">Quitar</button></div>`
+    : `<label class="item click" for="file_${tipo}"><div class="mini" style="background:var(--superficie2)">＋</div><div><div class="nombre" style="font-size:14px">${label}</div><div class="meta">Tocá para subir (PNG/JPG)</div></div><input id="file_${tipo}" type="file" accept="image/*" style="display:none" onchange="subirSello('${tipo}',event)"></label>`;
+  return item('iglesia','Sello de la iglesia') + item('pastor','Sello / firma del pastor');
+}
+function subirSello(tipo,ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{ SELLOS[tipo]=e.target.result; const box=document.getElementById('sellosbox'); if(box) box.innerHTML=sellosConfigHtml(); };
+  r.readAsDataURL(f);
+}
+function quitarSello(tipo){ SELLOS[tipo]=''; const box=document.getElementById('sellosbox'); if(box) box.innerHTML=sellosConfigHtml(); }
+
+// ---- Certificados (bautismo / presentación), SUITE §7.8 ----
+// Usa el sello subido si existe; si no, un marcador de posición.
+function certShell(o){
+  // o = {tema, emoji, deco, titulo, cuerpo, testigos}
+  const sello=(tipo,txt)=> SELLOS[tipo]
+    ? `<div class="sello-img"><img src="${SELLOS[tipo]}"></div>`
+    : `<div class="sello">${txt}</div>`;
+  return `
+    <div class="cert ${o.tema}">
+      <div class="deco">${o.deco}</div>
+      <div class="orla">
+        <div class="emoji-top">${o.emoji}</div>
+        <div class="ig">${IGLESIA}</div>
+        <h2>${o.titulo}</h2>
+        <div class="cuerpo">${o.cuerpo}</div>
+        ${o.testigos?`<div class="testigos">Testigos: ${o.testigos}</div>`:''}
+        <div class="sellos">${sello('iglesia','Sello de la<br>iglesia')}${sello('pastor','Sello / firma<br>del pastor')}</div>
+      </div>
+    </div>`;
+}
+function certBautismo(d){
+  const deco=`<span style="top:8px;left:10px">🕊️</span><span style="top:10px;right:12px">💧</span>
+    <span style="bottom:96px;left:8px">🌊</span><span style="bottom:92px;right:10px">💦</span>
+    <span style="bottom:10px;left:16px">✝️</span><span style="bottom:12px;right:18px">💧</span>`;
+  const cuerpo=`Se certifica que<br><b style="font-size:16px">${d.miembro}</b><br>
+    recibió el santo bautismo en las aguas<br>el día <b>${fv(d.fecha)}</b>, en <b>${d.lugar}</b>.`;
+  return `<button class="volver" onclick="setSub({g:'bautismos'})">← Bautismos</button>
+    <div class="ok" style="margin-bottom:10px">✓ Bautismo registrado · certificado generado</div>
+    ${certShell({tema:'tema-bautismo', emoji:'💧🕊️', deco, titulo:'Certificado de Bautismo', cuerpo, testigos:''})}
+    <button class="btn" onclick="window.print()">⬇️ Descargar / Imprimir</button>
+    <button class="btn sec" onclick="alert('(maqueta) Compartir certificado')">Compartir</button>`;
+}
+function certPresentacion(d){
+  const esNena = d.sexo==='nena';
+  // Color del certificado según el sexo: nena → rosa, varón → celeste.
+  const tema = esNena ? 'tema-bebe nena' : 'tema-bebe varon';
+  const emoji = esNena ? '👶🎀' : '👶💙';
+  const deco = esNena
+    ? `<span style="top:8px;left:10px">🧸</span><span style="top:10px;right:12px">🎀</span>
+       <span style="bottom:96px;left:8px">⭐</span><span style="bottom:92px;right:10px">☁️</span>
+       <span style="bottom:10px;left:16px">🍼</span><span style="bottom:12px;right:18px">💗</span>`
+    : `<span style="top:8px;left:10px">🧸</span><span style="top:10px;right:12px">🎈</span>
+       <span style="bottom:96px;left:8px">⭐</span><span style="bottom:92px;right:10px">☁️</span>
+       <span style="bottom:10px;left:16px">🍼</span><span style="bottom:12px;right:18px">💙</span>`;
+  const cuerpo=`Por la presente se hace constar que<br>
+    <b style="font-size:16px">${d.nino}</b>,<br>
+    nacido/a en la ciudad de <b>${d.lugarNac}</b>${d.fechaNac?`, el <b>${fv(d.fechaNac)}</b>`:''},<br>
+    fue presentado/a en <b>${d.lugarPres}</b>, el <b>${fv(d.fecha)}</b>${d.oficiante?`,<br>por <b>${d.oficiante}</b>`:''}.`;
+  return `<button class="volver" onclick="setSub({g:'presentaciones'})">← Presentaciones</button>
+    <div class="ok" style="margin-bottom:10px">✓ Presentación registrada · certificado generado</div>
+    ${certShell({tema, emoji, deco, titulo:'Certificado de Presentación', cuerpo, testigos:d.testigos})}
+    <button class="btn" onclick="window.print()">⬇️ Descargar / Imprimir</button>
+    <button class="btn sec" onclick="alert('(maqueta) Compartir certificado')">Compartir</button>`;
+}
+
+// Sintetiza un detalle plausible a partir de los totales (maqueta).
+function detalleDe(s){
+  const racha = s.cumplimiento>=95?6 : s.cumplimiento>=85?4 : s.cumplimiento>=75?2 : 0;
+  const eventos=['Culto Domingo','Reunión de Oración','Vigilia','Servicio Especial','Reunión Jóvenes'];
+  const motivos=['Viaje familiar','Trabajo','Problema de salud'];
+  let sem=0; const ff=()=>{const d=new Date('2026-05-31');d.setDate(d.getDate()-sem*7);sem++;const p=d.toISOString().slice(0,10).split('-');return `${p[2]}-${p[1]}-${p[0]}`;};
+  const hist=[];
+  for(let i=0;i<Math.min(s.completadas,4);i++) hist.push({nombre:eventos[i%5],fecha:ff(),area:DATA.miembro.equipo,status:'Aceptado',motivo:''});
+  for(let i=0;i<s.rechazos;i++) hist.push({nombre:eventos[(i+2)%5],fecha:ff(),area:'Área',status:'Rechazado',motivo:motivos[i%3]});
+  for(let i=0;i<s.pendientes;i++) hist.push({nombre:eventos[(i+1)%5],fecha:ff(),area:'Área',status:'Pendiente',motivo:''});
+  const ausencias = s.rechazos>1 ? [{motivo:'Vacaciones',fi:'2026-07-10',ff:'2026-07-20'}] : [];
+  return {racha,hist,ausencias};
+}
+
+// ---- Sesión REAL (login real) ----------------------------------------------
+// Si entrás con tu cuenta real (login_miembro.html → ?real=1), se usa tu nombre y tu
+// ROL real, y se reemplaza el equipo de Multimedia de ejemplo por el TUYO, traído en vivo
+// del backend. El resto de los datos siguen siendo de maqueta (la App 2 aún no existe).
+function rolMaqueta(rolBackend){
+  const r=(rolBackend||'').toLowerCase();
+  // En la App 1 el rol es admin/líder/user. Lo mapeamos a los roles de la suite.
+  if(r==='admin'||r==='líder'||r==='lider') return 'lider';
+  if(r==='pastor') return 'pastor';
+  return 'miembro';
+}
+async function traerEquipoReal(equipoId){
+  // Reemplaza el equipo "Multimedia" de ejemplo por el real (mismo formato que DATA.equipos).
+  const poner=(nombre, servidores, sinMetricas)=>{
+    DATA.miembro.equipo = nombre;
+    const real={
+      nombre, real:true, sinMetricas:!!sinMetricas,
+      cumplimiento: servidores.length?Math.round(servidores.reduce((a,s)=>a+(s.cumplimiento||0),0)/servidores.length):0,
+      pendientes: servidores.reduce((a,s)=>a+(s.pendientes||0),0),
+      rechazos: servidores.reduce((a,s)=>a+(s.rechazos||0),0),
+      servidores
+    };
+    const i=DATA.equipos.findIndex(e=>/multimedia/i.test(e.nombre));
+    if(i>=0) DATA.equipos[i]=real; else DATA.equipos.unshift(real);
+    render();
+  };
+  // 1) dashboard_equipo: trae métricas por servidor (puede no estar desplegado en Render).
+  try{
+    const r=await fetch(`${API}/api/dashboard_equipo?equipo_id=${equipoId}`);
+    if(r.ok){
+      const d=await r.json();
+      if(d.status==='success' && Array.isArray(d.servidores)){
+        poner(d.nombre_ministerio||'Multimedia', d.servidores.map(s=>({
+          nombre:s.nombre, cumplimiento:s.cumplimiento??0,
+          completadas:s.tareas_completadas||0, pendientes:s.tareas_pendientes||0, rechazos:s.tareas_rechazadas||0
+        })), false);
+        return;
+      }
+    }
+  }catch(e){ /* sigo al fallback */ }
+  // 2) get_equipo: trae los integrantes reales (sin métricas de cumplimiento).
+  try{
+    const r=await fetch(`${API}/api/get_equipo`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({equipo_id:equipoId})});
+    if(r.ok){
+      const d=await r.json();
+      const us=d.usuarios||[];
+      poner(d.nombre_ministerio||'Multimedia', us.map(u=>({
+        nombre:u.nombre||u.nombre_completo||'—', cumplimiento:0, completadas:0, pendientes:0, rechazos:0
+      })), true);
+      return;
+    }
+  }catch(e){ /* queda el equipo de maqueta */ }
+  console.warn('No se pudo traer el equipo real (CORS o backend dormido). Queda el de maqueta.');
+}
+async function cargarSesionReal(){
+  if(new URLSearchParams(location.search).get('real')!=='1') return; // solo tras login real
+  let s=null; try{ s=JSON.parse(sessionStorage.getItem('neh_sesion')||'null'); }catch(e){}
+  if(!s){ return; }
+  DATA.miembro.nombre = s.nombre || DATA.miembro.nombre;
+  ROL = rolMaqueta(s.rol);
+  DATA.roles = ROL==='pastor' ? ['miembro','servidor','lider','pastor']
+             : ROL==='lider'  ? ['miembro','servidor','lider'] : ['miembro'];
+  if(!tabsActuales().some(t=>t.id===TAB) && !TABS_TOP.includes(TAB)) TAB='inicio';
+  render(); // pinta ya con nombre/rol real (equipo aún de maqueta)
+  if(s.equipo_id) await traerEquipoReal(s.equipo_id); // luego reemplaza el equipo real
+}
+
+render();
+cargarSesionReal();
+</script>
+</body>
+</html>
