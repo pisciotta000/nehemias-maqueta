@@ -188,7 +188,7 @@
         <option value="miembro">Miembro</option>
         <option value="lider">Líder de equipo</option>
         <option value="pastor">Pastor general</option>
-        <option value="multimedia">Multimedia (mi equipo)</option>
+        <option value="multimedia">Líder de Multimedia</option>
       </select>
       <span id="rolbar_accion" style="margin-left:auto">demo de roles</span>
     </div>
@@ -306,8 +306,10 @@ function tabsActuales(){
   const matri = {id:'matrimonios',ic:'favorite',label:'Matrimonios'};
   const jov   = {id:'jovenes',ic:'jovenes',label:'Jóvenes'};
   const esc   = {id:'escuelita',ic:'escuelita',label:'Escuelita'};
-  if(ROL==='lider' || ROL==='pastor'){
-    const primero = ROL==='lider' ? {id:'equipo',ic:'dashboard',label:'Mi equipo'} : {id:'panel',ic:'dashboard',label:'Panel'};
+  // Multimedia (líder) tiene las MISMAS pestañas que cualquier líder; lo único extra es
+  // el botón "Crear evento" (va en la barra de rol, no en la barra inferior).
+  if(ROL==='lider' || ROL==='pastor' || ROL==='multimedia'){
+    const primero = ROL==='pastor' ? {id:'panel',ic:'dashboard',label:'Panel'} : {id:'equipo',ic:'dashboard',label:'Mi equipo'};
     const t=[inicio, primero, matri];
     if(dashCfg('jovenes').activo)   t.push(jov);   // se ocultan si el pastor
     if(dashCfg('escuelita').activo) t.push(esc);   // desactivó el grupo (§7.10)
@@ -369,9 +371,8 @@ let NOTIS_ABIERTO=false;
     ROL=r;
     ESMULTIMEDIA = (r==='multimedia');
     DATA.roles = r==='miembro'?['miembro']
-      : r==='lider'?['miembro','servidor','lider']
       : r==='pastor'?['miembro','servidor','lider','pastor']
-      : ['miembro','servidor']; // multimedia
+      : ['miembro','servidor','lider']; // líder o multimedia (líder de Multimedia)
     if(ESMULTIMEDIA) DATA.miembro.equipo='Multimedia';
   }
   // Si el login mandó la lista real de roles, la usamos tal cual (refleja la cuenta existente).
@@ -381,14 +382,14 @@ let NOTIS_ABIERTO=false;
 
 function setRol(r){
   ROL=r; SUB=null;
-  // "Multimedia (mi equipo)": somos servidores del equipo Multimedia. Eso habilita crear eventos
-  // para toda la iglesia (§7.5); el permiso va atado a pertenecer a Multimedia, no a un rol jerárquico.
+  // "Multimedia (líder)": líder del equipo Multimedia. Tiene TODOS los permisos de un líder
+  // y, además, puede crear eventos para toda la iglesia (§7.5). El permiso de crear eventos
+  // va atado a pertenecer a Multimedia, no a un rol jerárquico.
   ESMULTIMEDIA = (r==='multimedia');
   DATA.roles = r==='miembro'?['miembro']
-    : r==='lider'?['miembro','servidor','lider']
     : r==='pastor'?['miembro','servidor','lider','pastor']
-    : ['miembro','servidor']; // multimedia
-  DATA.miembro.equipo = ESMULTIMEDIA ? 'Multimedia' : DATA.miembro.equipo;
+    : ['miembro','servidor','lider']; // líder o multimedia (líder de Multimedia)
+  if(ESMULTIMEDIA) DATA.miembro.equipo='Multimedia';
   if(!tabsActuales().some(t=>t.id===TAB) && !TABS_TOP.includes(TAB)) TAB='inicio';
   render();
 }
