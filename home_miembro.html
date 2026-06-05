@@ -56,6 +56,10 @@
 
   .rolbar{padding:8px 14px;background:var(--superficie);display:flex;align-items:center;gap:8px;font-size:11px;color:var(--texto2);}
   .rolbar select{background:var(--fondo);color:#fff;border:1px solid #3a3357;border-radius:7px;padding:4px 7px;font-size:11px;}
+  .btn-crear-evento{background:linear-gradient(135deg,var(--morado),#9c4dff);color:#fff;border:0;border-radius:8px;
+    padding:6px 12px;font-size:12px;font-weight:bold;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+    box-shadow:0 2px 10px #7000ff55;}
+  .btn-crear-evento:active{transform:scale(.97);}
 
   .contenido{flex:1;overflow-y:auto;padding:16px;}
   .seccion-tit{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--cian);margin:4px 0 12px;font-weight:bold;}
@@ -184,8 +188,9 @@
         <option value="miembro">Miembro</option>
         <option value="lider">Líder de equipo</option>
         <option value="pastor">Pastor general</option>
+        <option value="multimedia">Multimedia (mi equipo)</option>
       </select>
-      <span style="margin-left:auto">demo de roles</span>
+      <span id="rolbar_accion" style="margin-left:auto">demo de roles</span>
     </div>
     <div class="contenido" id="cont"></div>
     <div class="nav" id="nav"></div>
@@ -315,6 +320,7 @@ function tabsActuales(){
 const TABS_TOP = ['familia','perfil'];
 
 let ROL='miembro', TAB='inicio', SUB=null;
+let ESMULTIMEDIA=false;  // pertenece al equipo Multimedia → puede crear eventos de congregación (§7.5)
 let FILTRO_HIST='todos'; // filtro del historial en el detalle de servidor
 let FILTRO_MAT='todos';  // filtro de la vista Matrimonios por tipo: todos | matrimonio | noviazgo
 let FILTRO_ASIS='todos'; // filtro de la vista Matrimonios por asistencia: todos | asisten | faltan
@@ -359,9 +365,14 @@ let NOTIS_ABIERTO=false;
 (function(){
   const q=new URLSearchParams(location.search);
   const r=q.get('rol');
-  if(r==='lider'||r==='pastor'||r==='miembro'){
+  if(r==='lider'||r==='pastor'||r==='miembro'||r==='multimedia'){
     ROL=r;
-    DATA.roles = r==='miembro'?['miembro'] : r==='lider'?['miembro','servidor','lider'] : ['miembro','servidor','lider','pastor'];
+    ESMULTIMEDIA = (r==='multimedia');
+    DATA.roles = r==='miembro'?['miembro']
+      : r==='lider'?['miembro','servidor','lider']
+      : r==='pastor'?['miembro','servidor','lider','pastor']
+      : ['miembro','servidor']; // multimedia
+    if(ESMULTIMEDIA) DATA.miembro.equipo='Multimedia';
   }
   // Si el login mandó la lista real de roles, la usamos tal cual (refleja la cuenta existente).
   const roles=q.get('roles');
@@ -370,7 +381,14 @@ let NOTIS_ABIERTO=false;
 
 function setRol(r){
   ROL=r; SUB=null;
-  DATA.roles = r==='miembro'?['miembro'] : r==='lider'?['miembro','servidor','lider'] : ['miembro','servidor','lider','pastor'];
+  // "Multimedia (mi equipo)": somos servidores del equipo Multimedia. Eso habilita crear eventos
+  // para toda la iglesia (§7.5); el permiso va atado a pertenecer a Multimedia, no a un rol jerárquico.
+  ESMULTIMEDIA = (r==='multimedia');
+  DATA.roles = r==='miembro'?['miembro']
+    : r==='lider'?['miembro','servidor','lider']
+    : r==='pastor'?['miembro','servidor','lider','pastor']
+    : ['miembro','servidor']; // multimedia
+  DATA.miembro.equipo = ESMULTIMEDIA ? 'Multimedia' : DATA.miembro.equipo;
   if(!tabsActuales().some(t=>t.id===TAB) && !TABS_TOP.includes(TAB)) TAB='inicio';
   render();
 }
@@ -459,6 +477,11 @@ function barrasHtml(c){ const max=Math.max(1,...c); return `<div style="display:
 
 function render(){
   const rs=document.getElementById('rolSel'); if(rs) rs.value=ROL;
+  // Si soy del equipo Multimedia, donde decía "demo de roles" aparece el botón de crear evento.
+  const acc=document.getElementById('rolbar_accion');
+  if(acc) acc.innerHTML = ESMULTIMEDIA
+    ? `<button class="btn-crear-evento" onclick="location.href='crear_evento.html'">＋ Crear evento</button>`
+    : 'demo de roles';
   document.getElementById('ab_nombre').textContent = DATA.miembro.nombre;
   document.getElementById('ab_av').textContent = inicial(DATA.miembro.nombre);
   document.getElementById('nav').innerHTML = tabsActuales().map(t=>
