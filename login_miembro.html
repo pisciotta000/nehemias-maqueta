@@ -61,15 +61,29 @@ let API = (function(){
 })();
 function setBackend(u){ API=u; render(); }
 // Iglesias ya registradas (demo). En real, el backend valida contra la tabla Iglesia.
-const IGLESIAS_DEMO = ['Multimedia - Rajem', 'Iglesia Central', 'Comunidad de Fe'];
+// CLAVE = nombre normalizado (minúsculas, sin espacios de más): el nombre es ÚNICO sin importar
+// mayúsculas/minúsculas, así nadie duplica una iglesia poniendo una letra distinta de tamaño.
+// Cada iglesia tiene sus EQUIPOS y si ese equipo YA tiene líder (para el flujo de líder, §7.4).
+const IGLESIAS_DEMO = {
+  'iglesia rajem':   {nombre:'Iglesia Rajem',   equipos:{
+    'multimedia':{nombre:'Multimedia', tieneLider:true},   // ya tiene líder (existe en Planificador)
+    'alabanza':  {nombre:'Alabanza',   tieneLider:false},  // sin líder todavía
+  }},
+  'iglesia central': {nombre:'Iglesia Central', equipos:{}},
+  'comunidad de fe': {nombre:'Comunidad de Fe', equipos:{}},
+};
+function normaliza(s){ return (s||'').trim().toLowerCase().replace(/\s+/g,' '); }
+function buscaIglesia(nombre){ return IGLESIAS_DEMO[normaliza(nombre)] || null; }
 
-let MODO = 'login';     // 'login' | 'registro'
-let REG_TIPO = 'unir';  // en registro: 'unir' (miembro) | 'crear' (pastor general da de alta la iglesia)
+let MODO = 'login';      // 'login' | 'registro'
+let REG_TIPO = 'unir';   // en registro: 'unir' (iglesia existente) | 'crear' (pastor da de alta la iglesia)
+let REG_COMO = 'miembro';// dentro de 'unir': 'miembro' | 'lider' (líder de un equipo, lo autoriza el pastor)
 
 function render(){
   document.getElementById('app').innerHTML = MODO==='login' ? vistaLogin() : vistaRegistro();
 }
 function setRegTipo(t){ REG_TIPO=t; render(); }
+function setRegComo(c){ REG_COMO=c; render(); }
 
 function vistaLogin(){
   return `
@@ -111,22 +125,38 @@ function vistaLogin(){
 function vistaRegistro(){
   const tab=(t,txt)=>`<button class="regtab ${REG_TIPO===t?'activo':''}" onclick="setRegTipo('${t}')">${txt}</button>`;
   const crear = REG_TIPO==='crear';
-  const campoIglesia = crear
-    ? `<label class="f">Nombre de la iglesia nueva</label>
+  let campos;
+  if(crear){
+    campos = `<label class="f">Nombre de la iglesia nueva</label>
        <input id="r_iglesia" placeholder="Ej: Iglesia Rajem">
-       <p class="hint">Vas a ser el <b>pastor general</b> de esta iglesia. El nombre <b>no puede repetirse</b> con otra ya registrada.</p>`
-    : `<label class="f">Nombre de tu iglesia</label>
+       <p class="hint">Vas a ser el <b>pastor general</b> de esta iglesia. El nombre <b>no puede repetirse</b>
+         con otra ya registrada — da igual mayúsculas o minúsculas (no se puede duplicar cambiando una letra).</p>`;
+  } else {
+    const como=(c,txt)=>`<button class="regtab ${REG_COMO===c?'activo':''}" onclick="setRegComo('${c}')">${txt}</button>`;
+    const campoEquipo = REG_COMO==='lider'
+      ? `<label class="f">Equipo que querés liderar</label>
+         <input id="r_equipo" placeholder="Ej: Alabanza" list="equipos_demo">
+         <datalist id="equipos_demo"><option value="Multimedia"><option value="Alabanza"></datalist>
+         <p class="hint">Ser líder lo <b>autoriza el pastor</b>: hasta que apruebe, entrás como <b>miembro</b>.
+           Si el equipo <b>ya tiene líder</b>, no vas a poder registrarte como líder (hablá con el líder
+           para que te sume).</p>`
+      : `<p class="hint">Entrás <b>como miembro</b>. Los roles superiores los asigna luego un líder/pastor
+           o una invitación de equipo.</p>`;
+    campos = `<label class="f">Nombre de tu iglesia</label>
        <input id="r_iglesia" placeholder="Elegí tu iglesia" list="iglesias_demo">
-       <datalist id="iglesias_demo">${IGLESIAS_DEMO.map(i=>`<option value="${i}">`).join('')}</datalist>
-       <p class="hint">Entrás <b>como miembro</b>. Los roles superiores los asigna luego un líder/pastor o una invitación de equipo.</p>`;
+       <datalist id="iglesias_demo">${Object.values(IGLESIAS_DEMO).map(i=>`<option value="${i.nombre}">`).join('')}</datalist>
+       <label class="f" style="margin-top:14px">¿Cómo querés registrarte?</label>
+       <div class="regtabs">${como('miembro','Miembro')}${como('lider','Líder de un equipo')}</div>
+       ${campoEquipo}`;
+  }
   return `
     <div class="logo">⛪</div>
     <h1>Crear cuenta</h1>
-    <p class="sub">${crear?'Registrá tu iglesia (sos el pastor general)':'Unite a tu iglesia como miembro'}</p>
+    <p class="sub">${crear?'Registrá tu iglesia (sos el pastor general)':'Unite a tu iglesia'}</p>
     <div class="regtabs">${tab('unir','Unirme a mi iglesia')}${tab('crear','Registrar iglesia nueva')}</div>
     <label class="f">Nombre y apellido</label>
     <input id="r_nombre" placeholder="Tu nombre">
-    ${campoIglesia}
+    ${campos}
     <label class="f">Correo electrónico</label>
     <input id="r_email" type="email" placeholder="tucorreo@email.com">
     <label class="f">Contraseña</label>
@@ -135,8 +165,8 @@ function vistaRegistro(){
     <button class="link" onclick="MODO='login';render()">← Ya tengo cuenta, ingresar</button>
     <div id="salida"></div>
     <p class="nota">Usa <b>POST /api/registro</b>. El <b>primero</b> que da de alta una iglesia es su
-      <b>pastor general</b>; los que se registran después entran como <b>miembro</b>. Si un equipo
-      te invita por Nehemías, sumás el rol <b>servidor</b> automáticamente.</p>`;
+      <b>pastor general</b>. Ser <b>líder</b> lo <b>autoriza el pastor</b>; si el equipo ya tiene líder,
+      registrate como miembro. Todo se separa por el <b>nombre de la iglesia</b> (§7.0/§7.4).</p>`;
 }
 
 // Login REAL contra el backend (mismo /api/login de la App 1). Trae tu rol real.
@@ -172,42 +202,74 @@ async function ingresar(){
 
 function registrar(){
   const nombre=document.getElementById('r_nombre').value.trim();
-  const iglesia=document.getElementById('r_iglesia').value.trim();
+  const iglesiaIn=document.getElementById('r_iglesia').value.trim();
   const email=document.getElementById('r_email').value.trim();
   const pass=document.getElementById('r_pass').value;
   const out=document.getElementById('salida');
-  if(!nombre||!iglesia||!email||!pass){ out.innerHTML='<div class="err">Completá todos los campos (incluida tu iglesia).</div>'; return; }
-  const existe = IGLESIAS_DEMO.some(i=>i.toLowerCase()===iglesia.toLowerCase());
+  if(!nombre||!iglesiaIn||!email||!pass){ out.innerHTML='<div class="err">Completá todos los campos (incluida tu iglesia).</div>'; return; }
 
+  // ── Registrar una IGLESIA NUEVA → el creador es el pastor general (nombre único, §7.0) ──
   if(REG_TIPO==='crear'){
-    // Alta de iglesia nueva: el nombre NO puede repetirse (multi-tenant, §12.5).
-    if(existe){
-      out.innerHTML = `<div class="err">Ya existe una iglesia llamada "<b>${iglesia}</b>".
-        El nombre no puede repetirse. Si es tu iglesia, unite <b>como miembro</b> (pestaña de arriba).</div>`;
+    if(buscaIglesia(iglesiaIn)){   // comparación normalizada (no importa mayúsculas/minúsculas)
+      out.innerHTML = `<div class="err">Ya existe una iglesia llamada "<b>${iglesiaIn}</b>".
+        El nombre no puede repetirse (ni cambiando mayúsculas). Si es tu iglesia, unite por la pestaña
+        <b>"Unirme a mi iglesia"</b>.</div>`;
       return;
     }
-    IGLESIAS_DEMO.push(iglesia); // queda registrada
+    IGLESIAS_DEMO[normaliza(iglesiaIn)] = {nombre:iglesiaIn, equipos:{}};
     out.innerHTML = `
       <div class="ok">
-        <div>✓ Iglesia <b>${iglesia}</b> registrada</div>
+        <div>✓ Iglesia <b>${iglesiaIn}</b> registrada</div>
         <div style="margin-top:8px">Quedás como <span class="chip" style="background:#7000FF26;color:#b388ff">pastor general</span></div>
-        <div style="color:var(--texto2);margin-top:8px">Los que se registren con esta iglesia entran como
-          <b>miembro</b>; vos (u otros líderes/pastores) les vas cambiando el rol.</div>
+        <div style="color:var(--texto2);margin-top:8px">Sos el único que <b>ve todo</b> de la iglesia. Vas a
+          <b>autorizar</b> a los líderes y asignar roles.</div>
         <button class="btn" style="margin-top:14px" onclick="location.href='home_miembro.html?rol=pastor'">Entrar a la app →</button>
       </div>`;
     return;
   }
 
-  // Unirse a una iglesia existente -> miembro.
-  if(!existe){
-    out.innerHTML = `<div class="err">No encontramos la iglesia "<b>${iglesia}</b>".
+  // ── Unirse a una iglesia EXISTENTE ──
+  const igl = buscaIglesia(iglesiaIn);
+  if(!igl){
+    out.innerHTML = `<div class="err">No encontramos la iglesia "<b>${iglesiaIn}</b>".
       Si todavía no está en Nehemías, registrala como <b>nueva</b> (pestaña de arriba) y serás el pastor general.</div>`;
     return;
   }
+
+  // Líder de un equipo → lo autoriza el pastor; si el equipo ya tiene líder, bloqueado.
+  if(REG_COMO==='lider'){
+    const equipoIn=(document.getElementById('r_equipo')?.value||'').trim();
+    if(!equipoIn){ out.innerHTML='<div class="err">Decí de qué equipo querés ser líder.</div>'; return; }
+    const eq = igl.equipos[normaliza(equipoIn)];
+    if(eq && eq.tieneLider){
+      // El equipo YA tiene líder → no se puede registrar como líder.
+      out.innerHTML = `
+        <div class="err" style="text-align:left;background:#E5393514;border:1px solid #E5393555;border-radius:12px;padding:13px">
+          🚫 El equipo "<b>${eq.nombre}</b>" de <b>${igl.nombre}</b> <b>ya tiene un líder registrado</b>.<br><br>
+          Registrate como <b>miembro</b> y hablá con el líder para que te <b>agregue al equipo</b>.
+        </div>
+        <button class="btn" style="margin-top:12px" onclick="setRegComo('miembro')">Registrarme como miembro</button>`;
+      return;
+    }
+    // Primer líder del equipo (equipo nuevo o sin líder) → pendiente de autorización del pastor.
+    out.innerHTML = `
+      <div class="ok">
+        <div>✓ Cuenta creada para <b>${nombre}</b> · <b>${igl.nombre}</b></div>
+        <div style="margin-top:8px">Pedido de <b>liderazgo de ${equipoIn}</b>:
+          <span class="chip" style="background:#FB8C0026;color:#FB8C00">pendiente de autorización del pastor</span></div>
+        <div style="color:var(--texto2);margin-top:8px">Mientras tanto entrás como <span class="chip">miembro</span>.
+          Cuando el <b>pastor lo apruebe</b>, vas a poder entrar como <b>líder</b> — acá y en
+          <b>Nehemías Planificador</b> (la autorización vale para las dos apps).</div>
+        <button class="btn" style="margin-top:14px" onclick="location.href='home_miembro.html?rol=miembro'">Entrar como miembro →</button>
+      </div>`;
+    return;
+  }
+
+  // Miembro común.
   out.innerHTML = `
     <div class="ok">
       <div>✓ Cuenta creada para <b>${nombre}</b></div>
-      <div style="margin-top:6px">Iglesia: <b>${iglesia}</b></div>
+      <div style="margin-top:6px">Iglesia: <b>${igl.nombre}</b></div>
       <div style="margin-top:8px">Entrás <b>exclusivamente como</b>: <span class="chip">miembro</span></div>
       <div style="color:var(--texto2);margin-top:8px">Si un equipo te invita por Nehemías, sumás
         automáticamente el rol <span class="chip" style="background:#7000FF26;color:#b388ff">servidor</span>.
