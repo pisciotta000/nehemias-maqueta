@@ -152,8 +152,10 @@
     border-radius:10px;overflow:hidden;container-type:inline-size;margin-bottom:8px;color:#26243a;
     font-family:Georgia,"Times New Roman",serif;box-shadow:0 4px 16px rgba(0,0,0,.45);
     aspect-ratio:1024/742;} /* proporción por defecto; cada certificado la fija según su plantilla */
-  .certimg .cf{position:absolute;transform:translate(-50%,-50%);text-align:center;white-space:nowrap;
-    line-height:1.05;font-weight:600;text-shadow:0 1px 2px rgba(255,255,255,.75);}
+  /* El texto se apoya SOBRE la línea (la línea hace de renglón): se ancla por su
+     base, no por el centro, así la línea no lo cruza. */
+  .certimg .cf{position:absolute;transform:translate(-50%,calc(-100% + 0.11em));text-align:center;
+    white-space:nowrap;line-height:1;font-weight:600;text-shadow:0 1px 2px rgba(255,255,255,.75);}
   .certimg .sll{position:absolute;transform:translate(-50%,-50%);width:20cqw;height:16cqw;
     display:flex;align-items:center;justify-content:center;}
   .certimg .sll img{max-width:100%;max-height:100%;object-fit:contain;}
@@ -1256,7 +1258,7 @@ function quitarSello(tipo){ SELLOS[tipo]=''; const box=document.getElementById('
 const MESES_CERT=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 function pf(iso){ // AAAA-MM-DD -> {d,m,a}: día (número), mes (palabra), año
   const p=(iso||'').split('-');
-  if(p.length===3 && p[0].length===4) return {d:String(+p[2]||''), m:MESES_CERT[+p[1]-1]||p[1]||'', a:p[0]};
+  if(p.length===3 && p[0].length===4) return {d:String(+p[2]||''), m:(MESES_CERT[+p[1]-1]||p[1]||'').toUpperCase(), a:p[0]};
   return {d:'',m:'',a:''};
 }
 // Campo de texto centrado sobre la plantilla (x,y en % · fs en cqw).
