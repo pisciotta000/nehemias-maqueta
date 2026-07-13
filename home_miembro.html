@@ -144,41 +144,19 @@
   .nav button .mi{width:23px;height:23px;fill:currentColor;display:block;}
   .nav button.activo{color:var(--cian);}
 
-  /* Certificado (bautismo / presentación) §7.8 — temático según el tipo */
-  .cert{border-radius:16px;padding:10px;margin-bottom:8px;position:relative;overflow:hidden;}
-  .cert .orla{border-radius:14px;padding:18px 16px;text-align:center;position:relative;z-index:1;}
-  .cert .emoji-top{font-size:34px;line-height:1.1;margin-bottom:2px;}
-  .cert .ig{font-size:10px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;}
-  .cert h2{font-size:19px;margin:6px 0 12px;letter-spacing:.5px;}
-  .cert .cuerpo{font-size:13.5px;line-height:1.8;}
-  .cert .testigos{font-size:11px;margin-top:12px;opacity:.85;}
-  /* Guirnalda decorativa en las esquinas (no formal) */
-  .cert .deco span{position:absolute;font-size:20px;opacity:.55;z-index:0;pointer-events:none;}
-  .cert .sellos{display:flex;justify-content:space-around;margin-top:20px;position:relative;z-index:1;}
-  .cert .sello{width:78px;height:78px;border:2px dashed currentColor;border-radius:50%;display:flex;
-    align-items:center;justify-content:center;text-align:center;font-size:9px;padding:8px;transform:rotate(-7deg);opacity:.85;}
-  .cert .sello-img{width:84px;height:84px;display:flex;align-items:center;justify-content:center;}
-  .cert .sello-img img{max-width:84px;max-height:84px;object-fit:contain;}
-
-  /* 🍼 Tema "bebé" para el certificado de PRESENTACIÓN — color según el sexo */
-  .cert.tema-bebe{color:#5b4a6b;font-family:"Trebuchet MS","Segoe UI",sans-serif;}
-  /* 💙 Varón → celeste */
-  .cert.tema-bebe.varon{background:linear-gradient(135deg,#cdeafe,#e8f6ff);}
-  .cert.tema-bebe.varon .orla{border:3px dashed #5cb3f0;background:rgba(255,255,255,.6);}
-  .cert.tema-bebe.varon .ig{color:#2f8fd6;}
-  .cert.tema-bebe.varon h2{color:#1f6fb2;}
-  /* 💗 Nena → rosa */
-  .cert.tema-bebe.nena{background:linear-gradient(135deg,#fde0ee,#fff0f6);}
-  .cert.tema-bebe.nena .orla{border:3px dashed #f7a8c4;background:rgba(255,255,255,.6);}
-  .cert.tema-bebe.nena .ig{color:#e0719f;}
-  .cert.tema-bebe.nena h2{color:#c2418a;}
-
-  /* 💧 Tema "agua" para el certificado de BAUTISMO */
-  .cert.tema-bautismo{background:linear-gradient(160deg,#bbdefb,#e1f5fe);color:#0d3b5c;
-    font-family:Georgia,"Times New Roman",serif;}
-  .cert.tema-bautismo .orla{border:3px solid #4fc3f7;background:rgba(255,255,255,.55);}
-  .cert.tema-bautismo .ig{color:#0277bd;}
-  .cert.tema-bautismo h2{color:#0288d1;}
+  /* Certificado (bautismo / presentación / matrimonio) §7.8 — sobre la plantilla real.
+     La imagen (certificados/*.jpg) trae todo el texto fijo; encima solo se superponen
+     los datos variables sobre las líneas y los sellos en su zona. Las medidas de fuente
+     van en cqw para escalar con el ancho del certificado. */
+  .certimg{position:relative;width:100%;background-size:cover;background-position:center;
+    border-radius:10px;overflow:hidden;container-type:inline-size;margin-bottom:8px;color:#26243a;
+    font-family:Georgia,"Times New Roman",serif;box-shadow:0 4px 16px rgba(0,0,0,.45);
+    aspect-ratio:1024/742;} /* proporción por defecto; cada certificado la fija según su plantilla */
+  .certimg .cf{position:absolute;transform:translate(-50%,-50%);text-align:center;white-space:nowrap;
+    line-height:1.05;font-weight:600;text-shadow:0 1px 2px rgba(255,255,255,.75);}
+  .certimg .sll{position:absolute;transform:translate(-50%,-50%);width:20cqw;height:16cqw;
+    display:flex;align-items:center;justify-content:center;}
+  .certimg .sll img{max-width:100%;max-height:100%;object-fit:contain;}
 </style>
 </head>
 <body>
@@ -1011,6 +989,7 @@ function vGrupoEdad(g){
 function vMatrimonios(){
   if(SUB && SUB.addLider) return formLider('matrimonios');
   if(SUB && SUB.lider)    return vLiderazgo('matrimonios');
+  if(SUB && SUB.cert)     return certMatrimonio(SUB.cert); // certificado de una pareja
   const cuenta=arr=>({total:arr.length, asisten:arr.filter(a=>a.asiste).length, faltan:arr.filter(a=>!a.asiste).length});
   const cAll=cuenta(DATA.aniversarios);
   const cMat=cuenta(DATA.aniversarios.filter(a=>a.tipo!=='noviazgo'));
@@ -1048,6 +1027,7 @@ function vMatrimonios(){
         <div style="flex:1"><div class="nombre">${a.conyuge1} y ${a.conyuge2}</div>
           <div style="margin:3px 0"><span class="chip" style="${t.chip}">${t.label}</span></div>
           <div class="meta">${fv(a.fecha)} · ${a.anios} año${a.anios===1?'':'s'}${a.dias===0?' · 🎉 ¡hoy!':a.dias<=7?` · en ${a.dias}d`:''}</div></div>
+        ${a.tipo!=='noviazgo'?`<button class="asis" style="background:#7000FF22;color:#c9a0ff;margin-right:6px" onclick="setSub({cert:DATA.aniversarios[${a._i}]})" title="Certificado de matrimonio">📄</button>`:''}
         <button class="asis ${a.asiste?'si':'no'}" onclick="toggleAsistencia(${a._i})">${a.asiste?'✓ Asiste':'✗ No asiste'}</button>
       </div>`;}).join('') || '<div class="vacio">No hay parejas en este filtro.</div>'}`;
 }
@@ -1269,59 +1249,74 @@ function subirSello(tipo,ev){
 }
 function quitarSello(tipo){ SELLOS[tipo]=''; const box=document.getElementById('sellosbox'); if(box) box.innerHTML=sellosConfigHtml(); }
 
-// ---- Certificados (bautismo / presentación), SUITE §7.8 ----
-// Usa el sello subido si existe; si no, un marcador de posición.
-function certShell(o){
-  // o = {tema, emoji, deco, titulo, cuerpo, testigos}
-  const sello=(tipo,txt)=> SELLOS[tipo]
-    ? `<div class="sello-img"><img src="${SELLOS[tipo]}"></div>`
-    : `<div class="sello">${txt}</div>`;
-  return `
-    <div class="cert ${o.tema}">
-      <div class="deco">${o.deco}</div>
-      <div class="orla">
-        <div class="emoji-top">${o.emoji}</div>
-        <div class="ig">${IGLESIA}</div>
-        <h2>${o.titulo}</h2>
-        <div class="cuerpo">${o.cuerpo}</div>
-        ${o.testigos?`<div class="testigos">Testigos: ${o.testigos}</div>`:''}
-        <div class="sellos">${sello('iglesia','Sello de la<br>iglesia')}${sello('pastor','Sello / firma<br>del pastor')}</div>
-      </div>
-    </div>`;
+// ---- Certificados (bautismo / presentación / matrimonio), SUITE §7.8 ----
+// Se dibujan SOBRE la plantilla real (certificados/*.jpg): la imagen trae el texto
+// fijo y acá solo se superponen los datos variables sobre las líneas y los sellos
+// (subidos en Perfil) en su zona. Las coordenadas x/y van en % del certificado.
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function pf(iso){ // AAAA-MM-DD -> {d,m,a}: día (número), mes (palabra), año
+  const p=(iso||'').split('-');
+  if(p.length===3 && p[0].length===4) return {d:String(+p[2]||''), m:MESES[+p[1]-1]||p[1]||'', a:p[0]};
+  return {d:'',m:'',a:''};
 }
+// Campo de texto centrado sobre la plantilla (x,y en % · fs en cqw).
+function cf(x,y,val,fs,color,bold){
+  return `<span class="cf" style="left:${x}%;top:${y}%;font-size:${fs}cqw${color?`;color:${color}`:''}${bold?';font-weight:700':''}">${val==null?'':val}</span>`;
+}
+// Sello subido (Perfil) en su zona; si no hay, la plantilla ya trae la etiqueta impresa.
+function sll(tipo,x,y){
+  return SELLOS[tipo] ? `<div class="sll" style="left:${x}%;top:${y}%"><img src="${SELLOS[tipo]}"></div>` : '';
+}
+function certBox(bg,ar,campos){ // ar = proporción real de la plantilla (ancho/alto)
+  return `<div class="certimg" style="aspect-ratio:${ar};background-image:url('certificados/${bg}')">${campos}</div>`;
+}
+function certBotones(){
+  return `<button class="btn" onclick="window.print()">⬇️ Descargar / Imprimir</button>
+    <button class="btn sec" onclick="alert('(maqueta) Compartir certificado')">Compartir</button>`;
+}
+
 function certBautismo(d){
-  const deco=`<span style="top:8px;left:10px">🕊️</span><span style="top:10px;right:12px">💧</span>
-    <span style="bottom:96px;left:8px">🌊</span><span style="bottom:92px;right:10px">💦</span>
-    <span style="bottom:10px;left:16px">✝️</span><span style="bottom:12px;right:18px">💧</span>`;
-  const cuerpo=`Se certifica que<br><b style="font-size:16px">${d.miembro}</b><br>
-    recibió el santo bautismo en las aguas<br>el día <b>${fv(d.fecha)}</b>, en <b>${d.lugar}</b>.`;
+  const f=pf(d.fecha), C='#0d3b5c';
+  const campos=
+    cf(50,51.3,d.miembro,5,C,true)+                          // nombre
+    cf(54.5,65,d.lugar,3.5,C)+                                // en la Iglesia ___
+    cf(30.5,72.6,f.d,3.4,C)+cf(53.5,72.6,f.m,3.4,C)+cf(75.5,72.6,f.a,3.4,C)+ // El día __ de __ de __
+    sll('iglesia',40,79.5)+sll('pastor',64.5,79.5);
   return `<button class="volver" onclick="setSub({g:'bautismos'})">← Bautismos</button>
     <div class="ok" style="margin-bottom:10px">✓ Bautismo registrado · certificado generado</div>
-    ${certShell({tema:'tema-bautismo', emoji:'💧🕊️', deco, titulo:'Certificado de Bautismo', cuerpo, testigos:''})}
-    <button class="btn" onclick="window.print()">⬇️ Descargar / Imprimir</button>
-    <button class="btn sec" onclick="alert('(maqueta) Compartir certificado')">Compartir</button>`;
+    ${certBox('bautismo.jpg','1024/742',campos)}
+    ${certBotones()}`;
 }
 function certPresentacion(d){
-  const esNena = d.sexo==='nena';
-  // Color del certificado según el sexo: nena → rosa, varón → celeste.
-  const tema = esNena ? 'tema-bebe nena' : 'tema-bebe varon';
-  const emoji = esNena ? '👶🎀' : '👶💙';
-  const deco = esNena
-    ? `<span style="top:8px;left:10px">🧸</span><span style="top:10px;right:12px">🎀</span>
-       <span style="bottom:96px;left:8px">⭐</span><span style="bottom:92px;right:10px">☁️</span>
-       <span style="bottom:10px;left:16px">🍼</span><span style="bottom:12px;right:18px">💗</span>`
-    : `<span style="top:8px;left:10px">🧸</span><span style="top:10px;right:12px">🎈</span>
-       <span style="bottom:96px;left:8px">⭐</span><span style="bottom:92px;right:10px">☁️</span>
-       <span style="bottom:10px;left:16px">🍼</span><span style="bottom:12px;right:18px">💙</span>`;
-  const cuerpo=`Por la presente se hace constar que<br>
-    <b style="font-size:16px">${d.nino}</b>,<br>
-    nacido/a en la ciudad de <b>${d.lugarNac}</b>${d.fechaNac?`, el <b>${fv(d.fechaNac)}</b>`:''},<br>
-    fue presentado/a en <b>${d.lugarPres}</b>, el <b>${fv(d.fecha)}</b>${d.oficiante?`,<br>por <b>${d.oficiante}</b>`:''}.`;
+  const esNena=d.sexo==='nena';
+  const bg=esNena?'presentacion_nena.jpg':'presentacion_varon.jpg';
+  const ar=esNena?'1464/1074':'1024/741';
+  const C=esNena?'#c2418a':'#1f5fa8';
+  const fn=pf(d.fechaNac), fp=pf(d.fecha);
+  const campos=
+    cf(58,40,d.nino,4.4,C,true)+                             // nombre
+    cf(63,48,d.lugarNac,3.1,C)+                              // nacido/a en ___
+    cf(46,56.6,fn.d,3,C)+cf(62,56.6,fn.m,3,C)+cf(77,56.6,fn.a,3,C)+   // el día __ de __ de __ (nacimiento)
+    cf(66,64.6,d.lugarPres,3.1,C)+                           // fue presentado/a en ___
+    cf(46,72.7,fp.d,3,C)+cf(62,72.7,fp.m,3,C)+cf(77,72.7,fp.a,3,C)+   // el día __ de __ de __ (presentación)
+    sll('iglesia',38,79.5)+sll('pastor',63,79.5);
   return `<button class="volver" onclick="setSub({g:'presentaciones'})">← Presentaciones</button>
     <div class="ok" style="margin-bottom:10px">✓ Presentación registrada · certificado generado</div>
-    ${certShell({tema, emoji, deco, titulo:'Certificado de Presentación', cuerpo, testigos:d.testigos})}
-    <button class="btn" onclick="window.print()">⬇️ Descargar / Imprimir</button>
-    <button class="btn sec" onclick="alert('(maqueta) Compartir certificado')">Compartir</button>`;
+    ${certBox(bg,ar,campos)}
+    ${certBotones()}`;
+}
+function certMatrimonio(d){
+  const f=pf(d.fecha), C='#7a2b1c';
+  const campos=
+    cf(22,40,d.conyuge1,3.4,C,true)+cf(69,40,d.conyuge2,3.4,C,true)+  // ___ y ___
+    cf(61,56.7,d.ciudad||'',3.3,C)+                          // En la ciudad de ___
+    cf(30,64.8,f.d,3.3,C)+cf(55,64.8,f.m,3.3,C)+cf(77,64.8,f.a,3.3,C)+ // El día __ de __ de __
+    cf(57,72.8,d.iglesia||IGLESIA,3.3,C)+                    // Iglesia ___
+    sll('iglesia',27,76)+sll('pastor',52,76);
+  return `<button class="volver" onclick="setSub({})">← Matrimonios</button>
+    <div class="ok" style="margin-bottom:10px">✓ Certificado de matrimonio</div>
+    ${certBox('matrimonio.jpg','1024/742',campos)}
+    ${certBotones()}`;
 }
 
 // Sintetiza un detalle plausible a partir de los totales (maqueta).
