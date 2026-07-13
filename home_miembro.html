@@ -1253,10 +1253,10 @@ function quitarSello(tipo){ SELLOS[tipo]=''; const box=document.getElementById('
 // Se dibujan SOBRE la plantilla real (certificados/*.jpg): la imagen trae el texto
 // fijo y acá solo se superponen los datos variables sobre las líneas y los sellos
 // (subidos en Perfil) en su zona. Las coordenadas x/y van en % del certificado.
-const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MESES_CERT=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 function pf(iso){ // AAAA-MM-DD -> {d,m,a}: día (número), mes (palabra), año
   const p=(iso||'').split('-');
-  if(p.length===3 && p[0].length===4) return {d:String(+p[2]||''), m:MESES[+p[1]-1]||p[1]||'', a:p[0]};
+  if(p.length===3 && p[0].length===4) return {d:String(+p[2]||''), m:MESES_CERT[+p[1]-1]||p[1]||'', a:p[0]};
   return {d:'',m:'',a:''};
 }
 // Campo de texto centrado sobre la plantilla (x,y en % · fs en cqw).
