@@ -1085,13 +1085,15 @@ function guardarLider(g){
   setSub({lider:true}); // vuelve a la pantalla de liderazgo
 }
 
-// ---- Gestión (líder y pastor): miembros, bautismos, presentaciones ----
+// ---- Gestión (líder y pastor): miembros, bautismos, presentaciones, matrimonios ----
 function vGestion(){
   if(SUB && SUB.g==='miembros') return SUB.alta ? formMiembro() : gMiembros();
   if(SUB && SUB.g==='bautismos') return SUB.cert ? certBautismo(SUB.cert) : (SUB.alta ? formBautismo() : gBautismos());
   if(SUB && SUB.g==='presentaciones') return SUB.cert ? certPresentacion(SUB.cert) : (SUB.alta ? formPresentacion() : gPresentaciones());
+  if(SUB && SUB.g==='matrimonios_cert') return SUB.cert ? certMatrimonio(SUB.cert) : (SUB.alta ? formMatrimonioCert() : gMatrimoniosCert());
   const baut = DATA.bautismos.filter(b=>b.fecha.startsWith('2026')).length;
   const pres = DATA.presentaciones.filter(p=>p.fecha.startsWith('2026')).length;
+  const matr = (DATA.matrimoniosCert||[]).length;
   return `
     <div class="seccion-tit">Gestión de la congregación</div>
     <div class="item click" onclick="setSub({g:'miembros'})"><div class="mini">👥</div>
@@ -1099,7 +1101,9 @@ function vGestion(){
     <div class="item click" onclick="setSub({g:'bautismos'})"><div class="mini" style="background:var(--cian)">💧</div>
       <div><div class="nombre">Bautismos</div><div class="meta">${baut} en 2026</div></div><span class="chevron">›</span></div>
     <div class="item click" onclick="setSub({g:'presentaciones'})"><div class="mini" style="background:var(--naranja)">🍼</div>
-      <div><div class="nombre">Presentaciones de niños</div><div class="meta">${pres} en 2026</div></div><span class="chevron">›</span></div>`;
+      <div><div class="nombre">Presentaciones de niños</div><div class="meta">${pres} en 2026</div></div><span class="chevron">›</span></div>
+    <div class="item click" onclick="setSub({g:'matrimonios_cert'})"><div class="mini" style="background:#E91E63">💍</div>
+      <div><div class="nombre">Matrimonios</div><div class="meta">${matr} registrado${matr===1?'':'s'} · certificado</div></div><span class="chevron">›</span></div>`;
 }
 function gMiembros(){
   return `<button class="volver" onclick="setSub(null)">← Gestión</button>
@@ -1130,6 +1134,15 @@ function gPresentaciones(){
     <div class="seccion-tit mt">Listado</div>
     ${DATA.presentaciones.map((p,i)=>`<div class="item click" onclick="setSub({g:'presentaciones',cert:DATA.presentaciones[${i}]})"><div class="mini" style="background:var(--naranja)">🍼</div>
       <div><div class="nombre">${p.nino}</div><div class="meta">Presentado ${fv(p.fecha)} · nac. en ${p.lugarNac} · ${p.padres}</div></div><span class="chevron">📄</span></div>`).join('')}`;
+}
+function gMatrimoniosCert(){
+  const lista = DATA.matrimoniosCert || [];
+  return `<button class="volver" onclick="setSub(null)">← Gestión</button>
+    <div class="seccion-tit">Matrimonios · total ${lista.length}</div>
+    <button class="btn" style="margin-top:0;margin-bottom:14px" onclick="setSub({g:'matrimonios_cert',alta:true})">＋ Registrar matrimonio</button>
+    <div class="seccion-tit mt">Listado</div>
+    ${lista.map((mm,i)=>`<div class="item click" onclick="setSub({g:'matrimonios_cert',cert:DATA.matrimoniosCert[${i}]})"><div class="mini" style="background:#E91E63">💍</div>
+      <div><div class="nombre">${mm.conyuge1} y ${mm.conyuge2}</div><div class="meta">${fv(mm.fecha)}${mm.ciudad?' · '+mm.ciudad:''}</div></div><span class="chevron">📄</span></div>`).join('') || '<div class="vacio">Todavía no registraste matrimonios.</div>'}`;
 }
 
 // ---- Altas de Gestión (formularios) ----
@@ -1236,6 +1249,33 @@ function guardarPresentacion(){
   setSub({g:'presentaciones', cert:reg}); // muestra el certificado generado
 }
 
+// Alta de matrimonio (líder/pastor): genera el certificado de matrimonio.
+function formMatrimonioCert(){
+  return `<button class="volver" onclick="setSub({g:'matrimonios_cert'})">← Matrimonios</button>
+    <div class="seccion-tit">Registrar matrimonio</div>
+    <div class="fila2">
+      <div><label class="f">Cónyuge 1 *</label><input id="mc_c1" placeholder="Nombre y apellido"></div>
+      <div><label class="f">Cónyuge 2 *</label><input id="mc_c2" placeholder="Nombre y apellido"></div>
+    </div>
+    <label class="f">Ciudad</label><input id="mc_ciudad" placeholder="Ej: José C. Paz">
+    <label class="f">Fecha del matrimonio *</label><input id="mc_fecha" type="date">
+    <label class="f">Iglesia</label><input id="mc_iglesia" placeholder="${IGLESIA}">
+    <button class="btn" onclick="guardarMatrimonioCert()">Guardar y generar certificado</button>
+    <div class="ok" id="mc_ok"></div>
+    <p style="color:#6f6a85;font-size:11px;margin-top:12px">Al guardar se arma el <b>certificado de matrimonio</b> automáticamente (SUITE §7.8).</p>`;
+}
+function guardarMatrimonioCert(){
+  const c1=document.getElementById('mc_c1').value.trim();
+  const c2=document.getElementById('mc_c2').value.trim();
+  const fecha=document.getElementById('mc_fecha').value;
+  if(!c1||!c2||!fecha){ document.getElementById('mc_ok').textContent='⚠️ Faltan los cónyuges o la fecha.'; return; }
+  const reg={ conyuge1:c1, conyuge2:c2, fecha,
+    ciudad:document.getElementById('mc_ciudad').value.trim()||'',
+    iglesia:document.getElementById('mc_iglesia').value.trim()||IGLESIA };
+  (DATA.matrimoniosCert = DATA.matrimoniosCert||[]).push(reg);
+  setSub({g:'matrimonios_cert', cert:reg}); // muestra el certificado generado
+}
+
 // ---- Sellos personalizados (se suben en Perfil, líder/pastor) ----
 function sellosConfigHtml(){
   const item=(tipo,label)=> SELLOS[tipo]
@@ -1284,14 +1324,18 @@ function specBautismo(d){
 function specPresentacion(d){
   const esNena=d.sexo==='nena', C=esNena?'#c2418a':'#1f5fa8';
   const fn=pf(d.fechaNac), fp=pf(d.fecha);
+  // ⚠️ Las dos plantillas NO tienen las líneas en la misma posición: cada una con sus coordenadas.
+  const P = esNena
+    ? {nom:[58,40],   nac:[63,48],   dmy:[46,62,77],       y1:56.6, pres:[66,64.6], y2:72.7}
+    : {nom:[57,40.2], nac:[61,48.2], dmy:[44.6,60,75],     y1:56.1, pres:[64,64.1], y2:72.1};
   return {tipo:'presentacion',
     bg:esNena?'presentacion_nena.jpg':'presentacion_varon.jpg',
     w:esNena?1464:1024, h:esNena?1074:741, campos:[
-    {x:58,y:40,t:d.nino,fs:4.4,c:C,b:1},                    // nombre
-    {x:63,y:48,t:d.lugarNac,fs:3.1,c:C},                    // nacido/a en ___
-    {x:46,y:56.6,t:fn.d,fs:3,c:C},{x:62,y:56.6,t:fn.m,fs:3,c:C},{x:77,y:56.6,t:fn.a,fs:3,c:C},
-    {x:66,y:64.6,t:d.lugarPres,fs:3.1,c:C},                 // fue presentado/a en ___
-    {x:46,y:72.7,t:fp.d,fs:3,c:C},{x:62,y:72.7,t:fp.m,fs:3,c:C},{x:77,y:72.7,t:fp.a,fs:3,c:C},
+    {x:P.nom[0],y:P.nom[1],t:d.nino,fs:4.4,c:C,b:1},                    // nombre
+    {x:P.nac[0],y:P.nac[1],t:d.lugarNac,fs:3.1,c:C},                    // nacido/a en ___
+    {x:P.dmy[0],y:P.y1,t:fn.d,fs:3,c:C},{x:P.dmy[1],y:P.y1,t:fn.m,fs:3,c:C},{x:P.dmy[2],y:P.y1,t:fn.a,fs:3,c:C},
+    {x:P.pres[0],y:P.pres[1],t:d.lugarPres,fs:3.1,c:C},                 // fue presentado/a en ___
+    {x:P.dmy[0],y:P.y2,t:fp.d,fs:3,c:C},{x:P.dmy[1],y:P.y2,t:fp.m,fs:3,c:C},{x:P.dmy[2],y:P.y2,t:fp.a,fs:3,c:C},
   ], sellos:[{tipo:'iglesia',x:38,y:79.5},{tipo:'pastor',x:63,y:79.5}]};
 }
 function specMatrimonio(d){
@@ -1385,7 +1429,9 @@ function certPresentacion(d){
     ${certBotones()}`;
 }
 function certMatrimonio(d){
-  return `<button class="volver" onclick="setSub({})">← Matrimonios</button>
+  // El "volver" depende de dónde se abrió: Gestión (matrimonios_cert) o la vista Matrimonios.
+  const volver = TAB==='gestion' ? "setSub({g:'matrimonios_cert'})" : "setSub({})";
+  return `<button class="volver" onclick="${volver}">← Matrimonios</button>
     <div class="ok" style="margin-bottom:10px">✓ Certificado de matrimonio</div>
     ${certHTML(specMatrimonio(d))}
     ${certBotones()}`;
