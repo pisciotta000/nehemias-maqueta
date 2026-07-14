@@ -491,6 +491,7 @@ function render(){
     matrimonios:vMatrimonios, jovenes:()=>vGrupoEdad('jovenes'), escuelita:()=>vGrupoEdad('escuelita')}[TAB] || vInicio;
   document.getElementById('cont').innerHTML = v();
   pintarCampana();
+  requestAnimationFrame(ajustarCertCampos); // achica nombres largos que no entran en su línea
 }
 
 // ---- Campana + notificaciones de la semana ----
@@ -1302,8 +1303,9 @@ function pf(iso){ // AAAA-MM-DD -> {d,m,a}: día (número), mes (palabra), año
   return {d:'',m:'',a:''};
 }
 // Campo de texto apoyado sobre la línea (x,y en % · fs en cqw). Se ancla por su base.
-function cf(x,y,val,fs,color,bold){
-  return `<span class="cf" style="left:${x}%;top:${y}%;font-size:${fs}cqw${color?`;color:${color}`:''}${bold?';font-weight:700':''}">${val==null?'':val}</span>`;
+// mw = ancho máximo (% del certificado): si el texto no entra, se achica (ver ajustarCertCampos).
+function cf(x,y,val,fs,color,bold,mw){
+  return `<span class="cf"${mw?` data-mw="${mw}"`:''} style="left:${x}%;top:${y}%;font-size:${fs}cqw${color?`;color:${color}`:''}${bold?';font-weight:700':''}">${val==null?'':val}</span>`;
 }
 // Sello subido (Perfil) en su zona; si no hay, la plantilla ya trae la etiqueta impresa.
 function sll(tipo,x,y){
@@ -1316,9 +1318,9 @@ function sll(tipo,x,y){
 function specBautismo(d){
   const f=pf(d.fecha), C='#0d3b5c';
   return {tipo:'bautismo', bg:'bautismo.jpg', w:1024, h:742, campos:[
-    {x:50,y:51.3,t:d.miembro,fs:5,c:C,b:1},                 // nombre
-    {x:54.5,y:65,t:d.lugar,fs:3.5,c:C},                     // en la Iglesia ___
-    {x:30.5,y:72.6,t:f.d,fs:3.4,c:C},{x:53.5,y:72.6,t:f.m,fs:3.4,c:C},{x:75.5,y:72.6,t:f.a,fs:3.4,c:C},
+    {x:50,y:51.3,t:d.miembro,fs:5,c:C,b:1,mw:76},           // nombre
+    {x:54.5,y:65,t:d.lugar,fs:3.5,c:C,mw:45},               // en la Iglesia ___
+    {x:30.5,y:72.6,t:f.d,fs:3.4,c:C,mw:20},{x:53.5,y:72.6,t:f.m,fs:3.4,c:C,mw:18},{x:75.5,y:72.6,t:f.a,fs:3.4,c:C,mw:17},
   ], sellos:[{tipo:'iglesia',x:40,y:79.5},{tipo:'pastor',x:64.5,y:79.5}]};
 }
 function specPresentacion(d){
@@ -1331,20 +1333,20 @@ function specPresentacion(d){
   return {tipo:'presentacion',
     bg:esNena?'presentacion_nena.jpg':'presentacion_varon.jpg',
     w:esNena?1464:1024, h:esNena?1074:741, campos:[
-    {x:P.nom[0],y:P.nom[1],t:d.nino,fs:4.4,c:C,b:1},                    // nombre
-    {x:P.nac[0],y:P.nac[1],t:d.lugarNac,fs:3.1,c:C},                    // nacido/a en ___
-    {x:P.dmy[0],y:P.y1,t:fn.d,fs:3,c:C},{x:P.dmy[1],y:P.y1,t:fn.m,fs:3,c:C},{x:P.dmy[2],y:P.y1,t:fn.a,fs:3,c:C},
-    {x:P.pres[0],y:P.pres[1],t:d.lugarPres,fs:3.1,c:C},                 // fue presentado/a en ___
-    {x:P.dmy[0],y:P.y2,t:fp.d,fs:3,c:C},{x:P.dmy[1],y:P.y2,t:fp.m,fs:3,c:C},{x:P.dmy[2],y:P.y2,t:fp.a,fs:3,c:C},
+    {x:P.nom[0],y:P.nom[1],t:d.nino,fs:4.4,c:C,b:1,mw:62},              // nombre
+    {x:P.nac[0],y:P.nac[1],t:d.lugarNac,fs:3.1,c:C,mw:40},              // nacido/a en ___
+    {x:P.dmy[0],y:P.y1,t:fn.d,fs:3,c:C,mw:12},{x:P.dmy[1],y:P.y1,t:fn.m,fs:3,c:C,mw:14},{x:P.dmy[2],y:P.y1,t:fn.a,fs:3,c:C,mw:13},
+    {x:P.pres[0],y:P.pres[1],t:d.lugarPres,fs:3.1,c:C,mw:42},           // fue presentado/a en ___
+    {x:P.dmy[0],y:P.y2,t:fp.d,fs:3,c:C,mw:12},{x:P.dmy[1],y:P.y2,t:fp.m,fs:3,c:C,mw:14},{x:P.dmy[2],y:P.y2,t:fp.a,fs:3,c:C,mw:13},
   ], sellos:[{tipo:'iglesia',x:38,y:79.5},{tipo:'pastor',x:63,y:79.5}]};
 }
 function specMatrimonio(d){
   const f=pf(d.fecha), C='#7a2b1c';
   return {tipo:'matrimonio', bg:'matrimonio.jpg', w:1024, h:742, campos:[
-    {x:22,y:40,t:d.conyuge1,fs:3.4,c:C,b:1},{x:69,y:40,t:d.conyuge2,fs:3.4,c:C,b:1}, // ___ y ___
-    {x:61,y:56.7,t:d.ciudad||'',fs:3.3,c:C},                // En la ciudad de ___
-    {x:30,y:64.8,t:f.d,fs:3.3,c:C},{x:55,y:64.8,t:f.m,fs:3.3,c:C},{x:77,y:64.8,t:f.a,fs:3.3,c:C},
-    {x:57,y:72.8,t:d.iglesia||IGLESIA,fs:3.3,c:C},          // Iglesia ___
+    {x:22.5,y:40,t:d.conyuge1,fs:3.4,c:C,b:1,mw:37},{x:66.5,y:40,t:d.conyuge2,fs:3.4,c:C,b:1,mw:36}, // ___ y ___
+    {x:61,y:56.7,t:d.ciudad||'',fs:3.3,c:C,mw:50},          // En la ciudad de ___
+    {x:30,y:64.8,t:f.d,fs:3.3,c:C,mw:20},{x:55,y:64.8,t:f.m,fs:3.3,c:C,mw:21},{x:77,y:64.8,t:f.a,fs:3.3,c:C,mw:15},
+    {x:57,y:72.8,t:d.iglesia||IGLESIA,fs:3.3,c:C,mw:43},    // Iglesia ___
   ], sellos:[{tipo:'iglesia',x:27,y:76},{tipo:'pastor',x:52,y:76}]};
 }
 
@@ -1353,13 +1355,25 @@ let CERT_SPEC=null; // último certificado mostrado (para descargar/compartir)
 // Overlay HTML del certificado a partir del spec.
 function certHTML(spec){
   CERT_SPEC=spec;
-  const campos=spec.campos.map(c=>cf(c.x,c.y,c.t,c.fs,c.c,c.b)).join('');
+  const campos=spec.campos.map(c=>cf(c.x,c.y,c.t,c.fs,c.c,c.b,c.mw)).join('');
   const sellos=spec.sellos.map(s=>sll(s.tipo,s.x,s.y)).join('');
   return `<div class="certimg" style="aspect-ratio:${spec.w}/${spec.h};background-image:url('certificados/${spec.bg}')">${campos}${sellos}</div>`;
 }
 function certBotones(){
   return `<button class="btn" onclick="descargarCert()">⬇️ Descargar imagen</button>
     <button class="btn sec" onclick="compartirCert()">Compartir</button>`;
+}
+
+// Achica los campos que no entran en su ancho máximo (data-mw). Corre tras cada render.
+function ajustarCertCampos(){
+  document.querySelectorAll('.certimg .cf[data-mw]').forEach(el=>{
+    const cert=el.closest('.certimg'); const W=cert?cert.clientWidth:0; if(!W) return;
+    el.style.fontSize=''; // parte del tamaño en cqw
+    const base=parseFloat(getComputedStyle(el).fontSize);
+    const maxpx=parseFloat(el.dataset.mw)/100*W;
+    const w=el.offsetWidth;
+    if(w>maxpx) el.style.fontSize=(base*maxpx/w*0.99)+'px';
+  });
 }
 
 // ---- Descarga/compartir del certificado como imagen (solo el certificado, alta calidad) ----
@@ -1377,8 +1391,14 @@ async function dibujarCertCanvas(spec){
   ctx.textAlign='center'; ctx.textBaseline='alphabetic';
   for(const c of spec.campos){
     if(!c.t) continue;
-    const px=c.fs/100*W;
-    ctx.font=`${c.b?'700 ':'600 '}${px}px Georgia, "Times New Roman", serif`;
+    let px=c.fs/100*W;
+    const fam=`Georgia, "Times New Roman", serif`;
+    ctx.font=`${c.b?'700 ':'600 '}${px}px ${fam}`;
+    // auto-fit: si el texto no entra en su ancho máximo (mw), se achica.
+    if(c.mw){
+      const maxpx=c.mw/100*W, tw=ctx.measureText(c.t).width;
+      if(tw>maxpx){ px=px*maxpx/tw; ctx.font=`${c.b?'700 ':'600 '}${px}px ${fam}`; }
+    }
     ctx.fillStyle=c.c||'#26243a';
     ctx.shadowColor='rgba(255,255,255,.85)'; ctx.shadowBlur=px*0.18; // halo (como el text-shadow)
     // base apoyada un pelín sobre la línea (mismo criterio que el overlay HTML)
