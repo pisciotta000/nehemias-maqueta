@@ -1261,7 +1261,7 @@ function pf(iso){ // AAAA-MM-DD -> {d,m,a}: día (número), mes (palabra), año
   if(p.length===3 && p[0].length===4) return {d:String(+p[2]||''), m:(MESES_CERT[+p[1]-1]||p[1]||'').toUpperCase(), a:p[0]};
   return {d:'',m:'',a:''};
 }
-// Campo de texto centrado sobre la plantilla (x,y en % · fs en cqw).
+// Campo de texto apoyado sobre la línea (x,y en % · fs en cqw). Se ancla por su base.
 function cf(x,y,val,fs,color,bold){
   return `<span class="cf" style="left:${x}%;top:${y}%;font-size:${fs}cqw${color?`;color:${color}`:''}${bold?';font-weight:700':''}">${val==null?'':val}</span>`;
 }
@@ -1269,55 +1269,125 @@ function cf(x,y,val,fs,color,bold){
 function sll(tipo,x,y){
   return SELLOS[tipo] ? `<div class="sll" style="left:${x}%;top:${y}%"><img src="${SELLOS[tipo]}"></div>` : '';
 }
-function certBox(bg,ar,campos){ // ar = proporción real de la plantilla (ancho/alto)
-  return `<div class="certimg" style="aspect-ratio:${ar};background-image:url('certificados/${bg}')">${campos}</div>`;
+
+// ---- "Spec" de cada certificado: fondo + campos + sellos (coordenadas en %) ----
+// Separar los datos del render permite pintarlos tanto en HTML (vista) como en un
+// <canvas> (descarga de imagen en alta calidad). w/h = tamaño real de la plantilla.
+function specBautismo(d){
+  const f=pf(d.fecha), C='#0d3b5c';
+  return {tipo:'bautismo', bg:'bautismo.jpg', w:1024, h:742, campos:[
+    {x:50,y:51.3,t:d.miembro,fs:5,c:C,b:1},                 // nombre
+    {x:54.5,y:65,t:d.lugar,fs:3.5,c:C},                     // en la Iglesia ___
+    {x:30.5,y:72.6,t:f.d,fs:3.4,c:C},{x:53.5,y:72.6,t:f.m,fs:3.4,c:C},{x:75.5,y:72.6,t:f.a,fs:3.4,c:C},
+  ], sellos:[{tipo:'iglesia',x:40,y:79.5},{tipo:'pastor',x:64.5,y:79.5}]};
+}
+function specPresentacion(d){
+  const esNena=d.sexo==='nena', C=esNena?'#c2418a':'#1f5fa8';
+  const fn=pf(d.fechaNac), fp=pf(d.fecha);
+  return {tipo:'presentacion',
+    bg:esNena?'presentacion_nena.jpg':'presentacion_varon.jpg',
+    w:esNena?1464:1024, h:esNena?1074:741, campos:[
+    {x:58,y:40,t:d.nino,fs:4.4,c:C,b:1},                    // nombre
+    {x:63,y:48,t:d.lugarNac,fs:3.1,c:C},                    // nacido/a en ___
+    {x:46,y:56.6,t:fn.d,fs:3,c:C},{x:62,y:56.6,t:fn.m,fs:3,c:C},{x:77,y:56.6,t:fn.a,fs:3,c:C},
+    {x:66,y:64.6,t:d.lugarPres,fs:3.1,c:C},                 // fue presentado/a en ___
+    {x:46,y:72.7,t:fp.d,fs:3,c:C},{x:62,y:72.7,t:fp.m,fs:3,c:C},{x:77,y:72.7,t:fp.a,fs:3,c:C},
+  ], sellos:[{tipo:'iglesia',x:38,y:79.5},{tipo:'pastor',x:63,y:79.5}]};
+}
+function specMatrimonio(d){
+  const f=pf(d.fecha), C='#7a2b1c';
+  return {tipo:'matrimonio', bg:'matrimonio.jpg', w:1024, h:742, campos:[
+    {x:22,y:40,t:d.conyuge1,fs:3.4,c:C,b:1},{x:69,y:40,t:d.conyuge2,fs:3.4,c:C,b:1}, // ___ y ___
+    {x:61,y:56.7,t:d.ciudad||'',fs:3.3,c:C},                // En la ciudad de ___
+    {x:30,y:64.8,t:f.d,fs:3.3,c:C},{x:55,y:64.8,t:f.m,fs:3.3,c:C},{x:77,y:64.8,t:f.a,fs:3.3,c:C},
+    {x:57,y:72.8,t:d.iglesia||IGLESIA,fs:3.3,c:C},          // Iglesia ___
+  ], sellos:[{tipo:'iglesia',x:27,y:76},{tipo:'pastor',x:52,y:76}]};
+}
+
+let CERT_SPEC=null; // último certificado mostrado (para descargar/compartir)
+
+// Overlay HTML del certificado a partir del spec.
+function certHTML(spec){
+  CERT_SPEC=spec;
+  const campos=spec.campos.map(c=>cf(c.x,c.y,c.t,c.fs,c.c,c.b)).join('');
+  const sellos=spec.sellos.map(s=>sll(s.tipo,s.x,s.y)).join('');
+  return `<div class="certimg" style="aspect-ratio:${spec.w}/${spec.h};background-image:url('certificados/${spec.bg}')">${campos}${sellos}</div>`;
 }
 function certBotones(){
-  return `<button class="btn" onclick="window.print()">⬇️ Descargar / Imprimir</button>
-    <button class="btn sec" onclick="alert('(maqueta) Compartir certificado')">Compartir</button>`;
+  return `<button class="btn" onclick="descargarCert()">⬇️ Descargar imagen</button>
+    <button class="btn sec" onclick="compartirCert()">Compartir</button>`;
+}
+
+// ---- Descarga/compartir del certificado como imagen (solo el certificado, alta calidad) ----
+function cargarImagen(src){
+  return new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous';
+    im.onload=()=>res(im); im.onerror=()=>rej(new Error('no se pudo cargar '+src)); im.src=src; });
+}
+// Dibuja el certificado en un <canvas> a la resolución nativa de la plantilla.
+async function dibujarCertCanvas(spec){
+  const fondo=await cargarImagen('certificados/'+spec.bg);
+  const W=fondo.naturalWidth||spec.w, H=fondo.naturalHeight||spec.h;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+  ctx.drawImage(fondo,0,0,W,H);
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  for(const c of spec.campos){
+    if(!c.t) continue;
+    const px=c.fs/100*W;
+    ctx.font=`${c.b?'700 ':'600 '}${px}px Georgia, "Times New Roman", serif`;
+    ctx.fillStyle=c.c||'#26243a';
+    ctx.shadowColor='rgba(255,255,255,.85)'; ctx.shadowBlur=px*0.18; // halo (como el text-shadow)
+    // base apoyada un pelín sobre la línea (mismo criterio que el overlay HTML)
+    ctx.fillText(c.t, c.x/100*W, c.y/100*H - px*0.14);
+  }
+  ctx.shadowBlur=0;
+  for(const s of spec.sellos){
+    const data=SELLOS[s.tipo]; if(!data) continue;
+    const im=await cargarImagen(data);
+    const r=(im.naturalHeight/im.naturalWidth)||1;
+    let dw=0.20*W, dh=dw*r; const maxh=0.16*W; if(dh>maxh){ dh=maxh; dw=dh/r; }
+    ctx.drawImage(im, s.x/100*W-dw/2, s.y/100*H-dh/2, dw, dh);
+  }
+  return cv;
+}
+async function descargarCert(){
+  if(!CERT_SPEC) return;
+  try{
+    const cv=await dibujarCertCanvas(CERT_SPEC);
+    const a=document.createElement('a');
+    a.download='certificado_'+CERT_SPEC.tipo+'.png';
+    a.href=cv.toDataURL('image/png');
+    document.body.appendChild(a); a.click(); a.remove();
+  }catch(e){ alert('No se pudo generar la imagen: '+e.message); }
+}
+async function compartirCert(){
+  if(!CERT_SPEC) return;
+  try{
+    const cv=await dibujarCertCanvas(CERT_SPEC);
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+    const file=new File([blob],'certificado_'+CERT_SPEC.tipo+'.png',{type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:'Certificado'});
+    } else { descargarCert(); } // sin Web Share (ej. escritorio): descarga
+  }catch(e){ if(e.name!=='AbortError') descargarCert(); }
 }
 
 function certBautismo(d){
-  const f=pf(d.fecha), C='#0d3b5c';
-  const campos=
-    cf(50,51.3,d.miembro,5,C,true)+                          // nombre
-    cf(54.5,65,d.lugar,3.5,C)+                                // en la Iglesia ___
-    cf(30.5,72.6,f.d,3.4,C)+cf(53.5,72.6,f.m,3.4,C)+cf(75.5,72.6,f.a,3.4,C)+ // El día __ de __ de __
-    sll('iglesia',40,79.5)+sll('pastor',64.5,79.5);
   return `<button class="volver" onclick="setSub({g:'bautismos'})">← Bautismos</button>
     <div class="ok" style="margin-bottom:10px">✓ Bautismo registrado · certificado generado</div>
-    ${certBox('bautismo.jpg','1024/742',campos)}
+    ${certHTML(specBautismo(d))}
     ${certBotones()}`;
 }
 function certPresentacion(d){
-  const esNena=d.sexo==='nena';
-  const bg=esNena?'presentacion_nena.jpg':'presentacion_varon.jpg';
-  const ar=esNena?'1464/1074':'1024/741';
-  const C=esNena?'#c2418a':'#1f5fa8';
-  const fn=pf(d.fechaNac), fp=pf(d.fecha);
-  const campos=
-    cf(58,40,d.nino,4.4,C,true)+                             // nombre
-    cf(63,48,d.lugarNac,3.1,C)+                              // nacido/a en ___
-    cf(46,56.6,fn.d,3,C)+cf(62,56.6,fn.m,3,C)+cf(77,56.6,fn.a,3,C)+   // el día __ de __ de __ (nacimiento)
-    cf(66,64.6,d.lugarPres,3.1,C)+                           // fue presentado/a en ___
-    cf(46,72.7,fp.d,3,C)+cf(62,72.7,fp.m,3,C)+cf(77,72.7,fp.a,3,C)+   // el día __ de __ de __ (presentación)
-    sll('iglesia',38,79.5)+sll('pastor',63,79.5);
   return `<button class="volver" onclick="setSub({g:'presentaciones'})">← Presentaciones</button>
     <div class="ok" style="margin-bottom:10px">✓ Presentación registrada · certificado generado</div>
-    ${certBox(bg,ar,campos)}
+    ${certHTML(specPresentacion(d))}
     ${certBotones()}`;
 }
 function certMatrimonio(d){
-  const f=pf(d.fecha), C='#7a2b1c';
-  const campos=
-    cf(22,40,d.conyuge1,3.4,C,true)+cf(69,40,d.conyuge2,3.4,C,true)+  // ___ y ___
-    cf(61,56.7,d.ciudad||'',3.3,C)+                          // En la ciudad de ___
-    cf(30,64.8,f.d,3.3,C)+cf(55,64.8,f.m,3.3,C)+cf(77,64.8,f.a,3.3,C)+ // El día __ de __ de __
-    cf(57,72.8,d.iglesia||IGLESIA,3.3,C)+                    // Iglesia ___
-    sll('iglesia',27,76)+sll('pastor',52,76);
   return `<button class="volver" onclick="setSub({})">← Matrimonios</button>
     <div class="ok" style="margin-bottom:10px">✓ Certificado de matrimonio</div>
-    ${certBox('matrimonio.jpg','1024/742',campos)}
+    ${certHTML(specMatrimonio(d))}
     ${certBotones()}`;
 }
 
